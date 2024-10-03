@@ -1,45 +1,81 @@
 import streamlit as st
-import os
+from openai import OpenAI
 
-st.title("Interview Bot Debugger")
+# Initialize OpenAI client
+client = OpenAI(api_key=st.secrets["openai_api_key"])
 
-# Display current working directory and list files
-st.write("Current working directory:", os.getcwd())
-st.write("Files in current directory:", os.listdir())
+# Function to generate a response
+def generate_response(prompt):
+    response = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=[{"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
+                  {"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
 
-# Try to import OpenAI
-try:
-    from openai import OpenAI
-    st.success("Successfully imported OpenAI")
-except ImportError as e:
-    st.error(f"Error importing OpenAI: {str(e)}")
+# List of interview questions
+interview_questions = [
+    "Can you briefly introduce yourself and your role in higher education?",
+    "How familiar are you with AI technologies and their applications in education?",
+    "Do you believe AI has the potential to transform higher education? If so, how?",
+    "In what ways do you think AI can enhance the learning experience for students?"
+]
 
-# Display Streamlit version
-st.write("Streamlit version:", st.__version__)
+# Streamlit app
+st.title("AI Interview: AI in Higher Education")
 
-# Print all available secrets
-st.write("All available secrets:")
-for key in st.secrets:
-    st.write(f"- {key}: {'*' * len(str(st.secrets[key]))}")
+# Initialize session state for question index and conversation history
+if 'question_index' not in st.session_state:
+    st.session_state.question_index = 0
+if 'conversation' not in st.session_state:
+    st.session_state.conversation = []
 
-# Try to access the OpenAI API key
-api_key = st.secrets.get("openai_api_key")
-if api_key:
-    st.success("Successfully accessed OpenAI API key from secrets")
-    st.write("API key (first 5 chars):", api_key[:5])
+# Display current question
+if st.session_state.question_index < len(interview_questions):
+    current_question = interview_questions[st.session_state.question_index]
+    st.write(f"Question {st.session_state.question_index + 1}: {current_question}")
+
+    # User input
+    user_answer = st.text_area("Your Answer:", height=150)
+
+    if st.button("Submit Answer"):
+        if user_answer:
+            # Add user's answer to conversation history
+            st.session_state.conversation.append(f"Q: {current_question}\nA: {user_answer}")
+
+            # Generate AI response
+            conversation_history = "\n\n".join(st.session_state.conversation)
+            ai_prompt = f"Based on the following conversation, provide a thoughtful response and a follow-up question as an experienced interviewer:\n\n{conversation_history}\n\nInterviewer response:"
+            ai_response = generate_response(ai_prompt)
+
+            st.write("Interviewer's Response:")
+            st.write(ai_response)
+
+            # Add AI's response to conversation history
+            st.session_state.conversation.append(f"Interviewer: {ai_response}")
+
+            # Move to next question
+            st.session_state.question_index += 1
+        else:
+            st.warning("Please provide an answer before submitting.")
+
+    # Option to skip to the next question
+    if st.button("Skip to Next Question"):
+        st.session_state.question_index += 1
+        st.experimental_rerun()
+
 else:
-    st.error("OpenAI API key not found in secrets")
+    st.success("Interview completed! Thank you for your insights on AI in higher education.")
 
-# Try to initialize OpenAI client
-if api_key:
-    try:
-        client = OpenAI(api_key=api_key)
-        models = client.models.list()
-        st.success("Successfully initialized OpenAI client and listed models")
-        st.write("Available models:", [model.id for model in models.data[:5]])
-    except Exception as e:
-        st.error(f"Error initializing OpenAI client: {str(e)}")
-else:
-    st.error("Cannot initialize OpenAI client without API key")
+# Display conversation history
+if st.checkbox("Show Interview Transcript"):
+    st.write("Interview Transcript:")
+    for entry in st.session_state.conversation:
+        st.write(entry)
+        st.write("---")
 
-st.write("Debug information complete")
+# Option to restart the interview
+if st.button("Restart Interview"):
+    st.session_state.question_index = 0
+    st.session_state.conversation = []
+    st.experimental_rerun()
