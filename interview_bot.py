@@ -12,7 +12,7 @@ except KeyError:
 def generate_response(prompt):
     try:
         response = client.completions.create(
-            model="gpt-4o",  # Using a text completion model
+            model="text-davinci-003",  # Using a text completion model
             prompt=f"You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide a thoughtful follow-up question or comment based on the interviewee's response: {prompt}",
             max_tokens=150,
             n=1,
