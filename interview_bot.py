@@ -10,16 +10,18 @@ api_key = st.secrets.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=api_key)
 
 # Function to generate a response
-def generate_response(prompt, is_follow_up=False):
+def generate_response(prompt, is_follow_up=False, is_feedback=False):
     try:
         system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. "
         if is_follow_up:
-            system_content += "Provide a thoughtful follow-up question or comment based on the interviewee's response. Do not introduce a new topic."
+            system_content += "Provide a thoughtful follow-up question based on the interviewee's response. Do not introduce a new topic."
+        elif is_feedback:
+            system_content += "Provide a brief feedback or comment on the interviewee's response."
         else:
-            system_content += "Provide a brief comment on the interviewee's response."
+            system_content += "Provide a brief introduction to the next question."
 
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini-2024-07-18",
             messages=[
                 {"role": "system", "content": system_content},
                 {"role": "user", "content": prompt}
@@ -69,25 +71,30 @@ if st.button("Submit"):
         # Add user response to conversation
         st.session_state.conversation.append({"role": "user", "content": user_response})
         
-        # Generate AI response
-        is_follow_up = st.session_state.follow_up_count < 3
-        ai_response = generate_response(user_response, is_follow_up)
+        # Generate AI feedback
+        ai_feedback = generate_response(user_response, is_feedback=True)
+        if ai_feedback:
+            st.session_state.conversation.append({"role": "assistant", "content": ai_feedback})
         
-        if ai_response:
-            st.session_state.conversation.append({"role": "assistant", "content": ai_response})
-            
-            if is_follow_up:
+        # Determine next action
+        if st.session_state.follow_up_count < 3:
+            # Generate follow-up question
+            ai_follow_up = generate_response(user_response, is_follow_up=True)
+            if ai_follow_up:
+                st.session_state.conversation.append({"role": "assistant", "content": ai_follow_up})
+                st.session_state.ai_prompt = f"{ai_feedback}\n\n{ai_follow_up}"
                 st.session_state.follow_up_count += 1
-                st.session_state.ai_prompt = ai_response
+        else:
+            # Move to next main question
+            st.session_state.current_question += 1
+            st.session_state.follow_up_count = 0
+            if st.session_state.current_question < len(interview_questions):
+                next_question_intro = generate_response(interview_questions[st.session_state.current_question])
+                st.session_state.ai_prompt = f"{ai_feedback}\n\n{next_question_intro}\n\n{interview_questions[st.session_state.current_question]}"
             else:
-                st.session_state.current_question += 1
-                st.session_state.follow_up_count = 0
-                if st.session_state.current_question < len(interview_questions):
-                    st.session_state.ai_prompt = interview_questions[st.session_state.current_question]
-                else:
-                    st.session_state.ai_prompt = "Thank you for completing the interview! Do you have any final thoughts or questions?"
-            
-            st.rerun()
+                st.session_state.ai_prompt = f"{ai_feedback}\n\nThank you for completing the interview! Do you have any final thoughts or questions?"
+        
+        st.rerun()
     else:
         st.warning("Please provide a response before submitting.")
 
