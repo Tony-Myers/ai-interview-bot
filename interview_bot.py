@@ -12,7 +12,7 @@ except KeyError:
 def generate_response(prompt):
     try:
         response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
                 {"role": "user", "content": prompt}
