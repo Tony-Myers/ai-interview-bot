@@ -11,14 +11,15 @@ except KeyError:
 # Function to generate a response
 def generate_response(prompt):
     try:
-        response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            messages=[
-                {"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
-                {"role": "user", "content": prompt}
-            ]
+        response = client.completions.create(
+            model="gtp-4",  # Using a text completion model
+            prompt=f"You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide a thoughtful follow-up question or comment based on the interviewee's response: {prompt}",
+            max_tokens=150,
+            n=1,
+            stop=None,
+            temperature=0.7,
         )
-        return response.choices[0].message.content
+        return response.choices[0].text.strip()
     except Exception as e:
         st.error(f"An error occurred while generating the response: {str(e)}")
         return None
@@ -40,8 +41,6 @@ interview_questions = [
 # Streamlit app
 st.title("AI Interviewer for Higher Education")
 
-st.write("Welcome to the AI Interviewer. This application simulates an interview about AI in higher education. Please respond to each question, and the AI will provide follow-up questions based on your answers.")
-
 # Initialize session state
 if 'current_question' not in st.session_state:
     st.session_state.current_question = 0
@@ -50,12 +49,11 @@ if 'conversation' not in st.session_state:
 if 'ai_prompt' not in st.session_state:
     st.session_state.ai_prompt = interview_questions[0]
 
-# Display AI prompt
-st.write("AI Interviewer:")
+# Display current AI prompt
 st.write(st.session_state.ai_prompt)
 
 # Get user input
-user_response = st.text_area("Your response:")
+user_response = st.text_area("Your response:", key=f"response_{st.session_state.current_question}")
 
 if st.button("Submit"):
     if user_response:
