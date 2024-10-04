@@ -12,24 +12,24 @@ client = OpenAI(api_key=api_key)
 # Function to generate a response
 def generate_response(prompt, response_type, conversation_history):
     try:
-        system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. "
+        system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses. "
         if response_type == "feedback":
-            system_content += "Provide a brief, insightful feedback on the interviewee's response without asking a new question."
+            system_content += "Provide a brief, insightful feedback on the interviewee's response without asking a new question or repeating information. Be concise and avoid pleasantries that might be redundant."
         elif response_type == "follow_up":
-            system_content += "Provide a thoughtful follow-up question based on the interviewee's response. Do not repeat previous questions or introduce topics from upcoming main questions."
+            system_content += "Provide a thoughtful follow-up question based on the interviewee's response. Do not repeat previous questions, information, or introduce topics from upcoming main questions. Avoid redundant pleasantries."
         elif response_type == "next_question":
-            system_content += "Provide a brief, natural transition to the next main question, considering the context of previous questions and responses."
+            system_content += "Provide a brief, natural transition to the next main question, considering the context of previous questions and responses. Avoid repeating information or using redundant pleasantries."
 
         messages = [
             {"role": "system", "content": system_content},
-            *conversation_history,
+            *conversation_history[-4:],  # Only include the last 4 exchanges for context
             {"role": "user", "content": prompt}
         ]
 
         response = client.chat.completions.create(
             model="gpt-4o-mini-2024-07-18",
             messages=messages,
-            max_tokens=150,
+            max_tokens=100,
             n=1,
             temperature=0.7,
         )
@@ -38,18 +38,16 @@ def generate_response(prompt, response_type, conversation_history):
         st.error(f"An error occurred while generating the response: {str(e)}")
         return None
 
-# List of interview questions (same as before)
+# List of interview questions (same as before, but in British English)
 interview_questions = [
-    "Can you briefly introduce yourself and your role in higher education?",
-    "How familiar are you with AI technologies and their applications in education?",
-    "Do you believe AI has the potential to transform higher education? If so, how?",
+    "Could you briefly introduce yourself and your role in higher education?",
+    "what is your particular interest with AI technologies and their applications in education?",
     "In what ways do you think AI can enhance the learning experience for students?",
-    "What ethical considerations should be taken into account when implementing AI in education?",
-    "How do you envision the role of educators evolving with the integration of AI in higher education?",
     "Can you share any specific examples or case studies of successful AI implementation in your institution or others you're familiar with?",
+    "What impact do you think AI will have on assessment methods in higher education?"
+    "What ethical considerations should be taken into account when implementing AI in education?",
     "What challenges do you foresee in adopting AI technologies in higher education, and how might these be addressed?",
-    "How do you think AI can be used to personalize learning experiences for students?",
-    "What potential impacts do you see AI having on research methodologies in higher education?"
+    "Do you believe AI has the potential to transform higher education?"
 ]
 
 # Initialize session state variables
@@ -83,16 +81,16 @@ if st.button("Submit"):
             # Generate follow-up question
             follow_up = generate_response(user_response, "follow_up", st.session_state.conversation)
             st.session_state.conversation.append({"role": "assistant", "content": follow_up})
-            st.session_state.ai_prompt = f"{feedback}\n\n{follow_up}"
+            st.session_state.ai_prompt = follow_up
             st.session_state.follow_up_count += 1
         else:
             # Move to next main question
             st.session_state.current_question += 1
             st.session_state.follow_up_count = 0
             if st.session_state.current_question < len(interview_questions):
-                next_question = generate_response(user_response, "next_question", st.session_state.conversation)
-                st.session_state.conversation.append({"role": "assistant", "content": next_question})
-                st.session_state.ai_prompt = f"{feedback}\n\n{next_question}\n\n{interview_questions[st.session_state.current_question]}"
+                next_question = interview_questions[st.session_state.current_question]
+                transition = generate_response(next_question, "next_question", st.session_state.conversation)
+                st.session_state.ai_prompt = f"{transition} {next_question}"
             else:
                 st.session_state.ai_prompt = "Thank you for completing the interview! Do you have any final thoughts or questions?"
         
