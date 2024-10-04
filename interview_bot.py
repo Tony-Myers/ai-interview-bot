@@ -36,7 +36,7 @@ def generate_response(prompt, response_type, conversation_history):
     except Exception as e:
         st.error(f"An error occurred while generating the response: {str(e)}")
         return None
-
+st.title("AI-Powered Interview Bot")
 # List of interview questions (same as before, but in British English)
 interview_questions = [
     "Could you briefly introduce yourself and your role in higher education?",
