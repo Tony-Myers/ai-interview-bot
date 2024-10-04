@@ -12,7 +12,9 @@ client = OpenAI(api_key=api_key)
 # Function to generate a response
 def generate_response(prompt, response_type, conversation_history):
     try:
-        system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses. "
+        system_content = ("You are an experienced and considerate interviewer in higher education, focusing on AI applications. "
+                          "Use British English in your responses, including British spellings (e.g., 'democratised' instead of 'democratized'). "
+                          "Ensure your responses are complete and not truncated. ")
         if response_type == "feedback":
             system_content += "Provide a brief, insightful feedback on the interviewee's response before asking a thoughtful follow-up question based on the interviewee's response but tryin to keep the focus on AI. Be concise and avoid pleasantries that might be redundant."
             system_content += "Do not repeat previous questions, information, or introduce topics from upcoming main questions. Avoid redundant pleasantries."
@@ -28,7 +30,7 @@ def generate_response(prompt, response_type, conversation_history):
         response = client.chat.completions.create(
             model="gpt-4o-mini-2024-07-18",
             messages=messages,
-            max_tokens=100,
+            max_tokens=200,
             n=1,
             temperature=0.7,
         )
