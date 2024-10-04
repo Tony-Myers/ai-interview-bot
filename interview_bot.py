@@ -12,7 +12,7 @@ except KeyError:
 def generate_response(prompt):
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4-1106-preview",
             messages=[
                 {"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
                 {"role": "user", "content": prompt}
@@ -67,7 +67,7 @@ if st.session_state.current_question < len(interview_questions):
             
             # Move to next question
             st.session_state.current_question += 1
-            st.experimental_rerun()
+            st.rerun()  # Use st.rerun() instead of st.experimental_rerun()
 
 # Display conversation history
 st.write("Conversation History:")
