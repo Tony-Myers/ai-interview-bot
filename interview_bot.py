@@ -14,9 +14,8 @@ def generate_response(prompt, response_type, conversation_history):
     try:
         system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses. "
         if response_type == "feedback":
-            system_content += "Provide a brief, insightful feedback on the interviewee's response without asking a new question or repeating information. Be concise and avoid pleasantries that might be redundant."
-        elif response_type == "follow_up":
-            system_content += "Provide a thoughtful follow-up question based on the interviewee's response. Do not repeat previous questions, information, or introduce topics from upcoming main questions. Avoid redundant pleasantries."
+            system_content += "Provide a brief, insightful feedback on the interviewee's response before asking a thoughtful follow-up question based on the interviewee's responsea. Be concise and avoid pleasantries that might be redundant."
+            system_content += "Do not repeat previous questions, information, or introduce topics from upcoming main questions. Avoid redundant pleasantries."
         elif response_type == "next_question":
             system_content += "Provide a brief, natural transition to the next main question, considering the context of previous questions and responses. Avoid repeating information or using redundant pleasantries."
 
@@ -43,7 +42,6 @@ interview_questions = [
     "Could you briefly introduce yourself and your role in higher education?",
     "what is your particular interest with AI technologies and their applications in education?",
     "In what ways do you think AI can enhance the learning experience for students?",
-    "Can you share any specific examples or case studies of successful AI implementation in your institution or others you're familiar with?",
     "What impact do you think AI will have on assessment methods in higher education?"
     "What ethical considerations should be taken into account when implementing AI in education?",
     "What challenges do you foresee in adopting AI technologies in higher education, and how might these be addressed?",
