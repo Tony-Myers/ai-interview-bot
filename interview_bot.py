@@ -30,7 +30,15 @@ def generate_response(prompt):
 # List of interview questions (same as before)
 interview_questions = [
     "Can you briefly introduce yourself and your role in higher education?",
-    # ... (other questions)
+    "How familiar are you with AI technologies and their applications in education?",
+    "Do you believe AI has the potential to transform higher education? If so, how?",
+    "In what ways do you think AI can enhance the learning experience for students?",
+    "What ethical considerations should be taken into account when implementing AI in education?",
+    "How do you envision the role of educators evolving with the integration of AI in higher education?",
+    "Can you share any specific examples or case studies of successful AI implementation in your institution or others you're familiar with?",
+    "What challenges do you foresee in adopting AI technologies in higher education, and how might these be addressed?",
+    "How do you think AI can be used to personalize learning experiences for students?",
+    "What skills do you think educators and students need to develop to effectively work with AI in education?"
 ]
 
 # Initialize session state variables
@@ -61,7 +69,7 @@ if st.button("Submit"):
             # Move to next question or use AI response as prompt
             st.session_state.current_question += 1
             if st.session_state.current_question < len(interview_questions):
-                st.session_state.ai_prompt = ai_response
+                st.session_state.ai_prompt = f"{ai_response}\n\nNext question: {interview_questions[st.session_state.current_question]}"
             else:
                 st.session_state.ai_prompt = "Thank you for completing the interview! Do you have any final thoughts or questions?"
             
