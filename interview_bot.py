@@ -47,16 +47,18 @@ if 'current_question' not in st.session_state:
     st.session_state.current_question = 0
 if 'conversation' not in st.session_state:
     st.session_state.conversation = []
+if 'ai_prompt' not in st.session_state:
+    st.session_state.ai_prompt = interview_questions[0]
 
-# Display current question
-if st.session_state.current_question < len(interview_questions):
-    st.write(f"Question {st.session_state.current_question + 1}:")
-    st.write(interview_questions[st.session_state.current_question])
-    
-    # Get user input
-    user_response = st.text_area("Your response:", key=f"response_{st.session_state.current_question}")
-    
-    if st.button("Submit"):
+# Display AI prompt
+st.write("AI Interviewer:")
+st.write(st.session_state.ai_prompt)
+
+# Get user input
+user_response = st.text_area("Your response:")
+
+if st.button("Submit"):
+    if user_response:
         # Add user response to conversation
         st.session_state.conversation.append({"role": "user", "content": user_response})
         
@@ -65,18 +67,21 @@ if st.session_state.current_question < len(interview_questions):
         if ai_response:
             st.session_state.conversation.append({"role": "assistant", "content": ai_response})
             
-            # Move to next question
+            # Move to next question or use AI response as prompt
             st.session_state.current_question += 1
-            st.rerun()  # Use st.rerun() instead of st.experimental_rerun()
+            if st.session_state.current_question < len(interview_questions):
+                st.session_state.ai_prompt = ai_response
+            else:
+                st.session_state.ai_prompt = "Thank you for completing the interview! Do you have any final thoughts or questions?"
+            
+            st.rerun()
+    else:
+        st.warning("Please provide a response before submitting.")
 
 # Display conversation history
 st.write("Conversation History:")
 for message in st.session_state.conversation:
     st.write(f"{message['role'].capitalize()}: {message['content']}")
-
-# End of interview
-if st.session_state.current_question >= len(interview_questions):
-    st.write("Thank you for completing the interview!")
 
 # Main execution
 if __name__ == "__main__":
