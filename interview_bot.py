@@ -1,122 +1,83 @@
 import streamlit as st
 from openai import OpenAI
 
-# Initialize OpenAI client
-client = OpenAI(api_key=st.secrets["openai_api_key"])
+# Initialize OpenAI client with API key from Streamlit secrets
+try:
+    client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+except KeyError:
+    st.error("OpenAI API key not found in Streamlit secrets. Please check your configuration.")
+    st.stop()
 
 # Function to generate a response
 def generate_response(prompt):
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."
-            },
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=[
+                {"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        st.error(f"An error occurred while generating the response: {str(e)}")
+        return None
 
 # List of interview questions
 interview_questions = [
     "Can you briefly introduce yourself and your role in higher education?",
     "How familiar are you with AI technologies and their applications in education?",
     "Do you believe AI has the potential to transform higher education? If so, how?",
-    "In what ways do you think AI can enhance the learning experience for students?"
+    "In what ways do you think AI can enhance the learning experience for students?",
+    "What ethical considerations should be taken into account when implementing AI in education?",
+    "How do you envision the role of educators evolving with the integration of AI in higher education?",
+    "Can you share any specific examples or case studies of successful AI implementation in your institution or others you're familiar with?",
+    "What challenges do you foresee in adopting AI technologies in higher education, and how might these be addressed?",
+    "How do you think AI can be used to personalize learning experiences for students?",
+    "What skills do you think educators and students need to develop to effectively work alongside AI in education?"
 ]
 
 # Streamlit app
-st.title("AI Interview: AI in Higher Education")
+st.title("AI Interviewer for Higher Education")
 
-# Initialize session state for question index and conversation history
-if 'question_index' not in st.session_state:
-    st.session_state.question_index = 0
+st.write("Welcome to the AI Interviewer. This application simulates an interview about AI in higher education. Please respond to each question, and the AI will provide follow-up questions based on your answers.")
+
+# Initialize session state
+if 'current_question' not in st.session_state:
+    st.session_state.current_question = 0
 if 'conversation' not in st.session_state:
     st.session_state.conversation = []
 
-# Function to display the conversation transcript with proper formatting
-def display_transcript(conversation):
-    st.markdown("### Interview Transcript")
-    for entry in conversation:
-        if entry['type'] == 'question':
-            st.markdown(f"**Q{entry['number']}: {entry['content']}**")
-        elif entry['type'] == 'answer':
-            st.markdown(f"*A*: {entry['content']}")
-        elif entry['type'] == 'interviewer':
-            st.markdown(f"**Interviewer**: {entry['content']}")
-        st.markdown("---")  # Separator for readability
-
 # Display current question
-if st.session_state.question_index < len(interview_questions):
-    current_question = interview_questions[st.session_state.question_index]
-    st.markdown(f"### Question {st.session_state.question_index + 1}:")
-    st.markdown(f"**{current_question}**")
-
-    # User input
-    user_answer = st.text_area("Your Answer:", height=150)
-
-    if st.button("Submit Answer"):
-        if user_answer.strip():
-            # Add user's answer to conversation history
-            st.session_state.conversation.append({
-                'type': 'question',
-                'number': st.session_state.question_index + 1,
-                'content': current_question
-            })
-            st.session_state.conversation.append({
-                'type': 'answer',
-                'content': user_answer.strip()
-            })
-
-            # Generate AI response
-            conversation_history = ""
-            for entry in st.session_state.conversation:
-                if entry['type'] == 'question':
-                    conversation_history += f"Q{entry['number']}: {entry['content']}\n"
-                elif entry['type'] == 'answer':
-                    conversation_history += f"A: {entry['content']}\n"
-                elif entry['type'] == 'interviewer':
-                    conversation_history += f"Interviewer: {entry['content']}\n"
-
-            ai_prompt = (
-                f"Based on the following conversation, provide a thoughtful response and a follow-up question as an experienced interviewer:\n\n"
-                f"{conversation_history}\n"
-                f"Interviewer response:"
-            )
-            ai_response = generate_response(ai_prompt)
-
-            st.session_state.conversation.append({
-                'type': 'interviewer',
-                'content': ai_response
-            })
-
-            st.success("Answer submitted and response generated!")
-
-            # Optionally display the AI response immediately
-            st.markdown("**Interviewer Response:**")
-            st.write(ai_response)
-            st.markdown("---")
-
+if st.session_state.current_question < len(interview_questions):
+    st.write(f"Question {st.session_state.current_question + 1}:")
+    st.write(interview_questions[st.session_state.current_question])
+    
+    # Get user input
+    user_response = st.text_area("Your response:", key=f"response_{st.session_state.current_question}")
+    
+    if st.button("Submit"):
+        # Add user response to conversation
+        st.session_state.conversation.append({"role": "user", "content": user_response})
+        
+        # Generate AI response
+        ai_response = generate_response(user_response)
+        if ai_response:
+            st.session_state.conversation.append({"role": "assistant", "content": ai_response})
+            
             # Move to next question
-            st.session_state.question_index += 1
-        else:
-            st.warning("Please provide an answer before submitting.")
-
-    # Option to skip to the next question
-    if st.button("Skip to Next Question"):
-        st.session_state.question_index += 1
-        st.experimental_rerun()
-
-else:
-    st.success("Interview completed! Thank you for your insights on AI in higher education.")
+            st.session_state.current_question += 1
+            st.experimental_rerun()
 
 # Display conversation history
-if st.checkbox("Show Interview Transcript"):
-    display_transcript(st.session_state.conversation)
+st.write("Conversation History:")
+for message in st.session_state.conversation:
+    st.write(f"{message['role'].capitalize()}: {message['content']}")
 
-# Option to restart the interview
-if st.button("Restart Interview"):
-    st.session_state.question_index = 0
-    st.session_state.conversation = []
-    st.experimental_rerun()
+# End of interview
+if st.session_state.current_question >= len(interview_questions):
+    st.write("Thank you for completing the interview!")
+
+# Main execution
+if __name__ == "__main__":
+    print("Streamlit app is ready to run. Use 'streamlit run <filename>.py' to start the app.")
