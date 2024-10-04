@@ -10,23 +10,26 @@ api_key = st.secrets.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=api_key)
 
 # Function to generate a response
-def generate_response(prompt, response_type):
+def generate_response(prompt, response_type, conversation_history):
     try:
         system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. "
         if response_type == "feedback":
             system_content += "Provide a brief, insightful feedback on the interviewee's response without asking a new question."
         elif response_type == "follow_up":
-            system_content += "Provide a thoughtful follow-up question based on the interviewee's response. Do not repeat previous feedback or introduce a new topic."
+            system_content += "Provide a thoughtful follow-up question based on the interviewee's response. Do not repeat previous questions or introduce topics from upcoming main questions."
         elif response_type == "next_question":
-            system_content += "Provide a brief, natural transition to the next main question without repeating previous feedback."
+            system_content += "Provide a brief, natural transition to the next main question, considering the context of previous questions and responses."
+
+        messages = [
+            {"role": "system", "content": system_content},
+            *conversation_history,
+            {"role": "user", "content": prompt}
+        ]
 
         response = client.chat.completions.create(
             model="gpt-4o-mini-2024-07-18",
-            messages=[
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=100,
+            messages=messages,
+            max_tokens=150,
             n=1,
             temperature=0.7,
         )
@@ -38,13 +41,15 @@ def generate_response(prompt, response_type):
 # List of interview questions (same as before)
 interview_questions = [
     "Can you briefly introduce yourself and your role in higher education?",
-    "What is your particular interest in AI and its application in education?",
+    "How familiar are you with AI technologies and their applications in education?",
+    "Do you believe AI has the potential to transform higher education? If so, how?",
     "In what ways do you think AI can enhance the learning experience for students?",
+    "What ethical considerations should be taken into account when implementing AI in education?",
+    "How do you envision the role of educators evolving with the integration of AI in higher education?",
     "Can you share any specific examples or case studies of successful AI implementation in your institution or others you're familiar with?",
     "What challenges do you foresee in adopting AI technologies in higher education, and how might these be addressed?",
-    "What ethical considerations should be taken into account when implementing AI in education?",
-    "What are your thoughts on the potential impact of AI on assessment and evaluation in higher education?",
-    "Do you believe AI has the potential to transform higher education?"
+    "How do you think AI can be used to personalize learning experiences for students?",
+    "What potential impacts do you see AI having on research methodologies in higher education?"
 ]
 
 # Initialize session state variables
@@ -56,8 +61,6 @@ if 'conversation' not in st.session_state:
     st.session_state.conversation = []
 if 'ai_prompt' not in st.session_state:
     st.session_state.ai_prompt = interview_questions[0]
-if 'feedback' not in st.session_state:
-    st.session_state.feedback = ""
 
 # Display current AI prompt
 st.write("AI Interviewer:", st.session_state.ai_prompt)
@@ -72,23 +75,24 @@ if st.button("Submit"):
         st.session_state.conversation.append({"role": "user", "content": user_response})
         
         # Generate AI feedback
-        feedback = generate_response(user_response, "feedback")
-        st.session_state.feedback = feedback
+        feedback = generate_response(user_response, "feedback", st.session_state.conversation)
         st.session_state.conversation.append({"role": "assistant", "content": feedback})
         
-        if st.session_state.follow_up_count < 3:
+        # Determine next action
+        if st.session_state.follow_up_count < 2:
             # Generate follow-up question
-            follow_up = generate_response(user_response + "\n\nPrevious feedback: " + feedback, "follow_up")
-            st.session_state.ai_prompt = feedback + "\n\n" + follow_up
+            follow_up = generate_response(user_response, "follow_up", st.session_state.conversation)
+            st.session_state.conversation.append({"role": "assistant", "content": follow_up})
+            st.session_state.ai_prompt = f"{feedback}\n\n{follow_up}"
             st.session_state.follow_up_count += 1
         else:
             # Move to next main question
             st.session_state.current_question += 1
             st.session_state.follow_up_count = 0
             if st.session_state.current_question < len(interview_questions):
-                transition = generate_response(user_response + "\n\nPrevious feedback: " + feedback, "next_question")
-                next_question = interview_questions[st.session_state.current_question]
-                st.session_state.ai_prompt = feedback + "\n\n" + transition + "\n\n" + next_question
+                next_question = generate_response(user_response, "next_question", st.session_state.conversation)
+                st.session_state.conversation.append({"role": "assistant", "content": next_question})
+                st.session_state.ai_prompt = f"{feedback}\n\n{next_question}\n\n{interview_questions[st.session_state.current_question]}"
             else:
                 st.session_state.ai_prompt = "Thank you for completing the interview! Do you have any final thoughts or questions?"
         
