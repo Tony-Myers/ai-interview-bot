@@ -11,17 +11,21 @@ except KeyError:
 # Function to generate a response
 def generate_response(prompt):
     try:
-        response = client.completions.create(
-            model="text-davinci-003",  # Using a text completion model
-            prompt=f"You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide a thoughtful follow-up question or comment based on the interviewee's response: {prompt}",
+        response = client.chat.completions.create(
+            model="gpt-4",  # Make sure this is the correct model name
+            messages=[
+                {"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
+                {"role": "user", "content": prompt}
+            ],
             max_tokens=150,
             n=1,
-            stop=None,
             temperature=0.7,
         )
-        return response.choices[0].text.strip()
+        return response.choices[0].message.content
     except Exception as e:
         st.error(f"An error occurred while generating the response: {str(e)}")
+        if "model_not_found" in str(e):
+            st.error("It seems you don't have access to the GPT-4 model. Please check your OpenAI account and ensure you have access to GPT-4.")
         return None
 
 # List of interview questions
@@ -53,7 +57,7 @@ if 'ai_prompt' not in st.session_state:
 st.write(st.session_state.ai_prompt)
 
 # Get user input
-user_response = st.text_area("Your response:", key=f"response_{st.session_state.current_question}")
+user_response = st.text_area("Your response:")
 
 if st.button("Submit"):
     if user_response:
