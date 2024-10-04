@@ -14,7 +14,7 @@ def generate_response(prompt, response_type, conversation_history):
     try:
         system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses. "
         if response_type == "feedback":
-            system_content += "Provide a brief, insightful feedback on the interviewee's response before asking a thoughtful follow-up question based on the interviewee's responsea. Be concise and avoid pleasantries that might be redundant."
+            system_content += "Provide a brief, insightful feedback on the interviewee's response before asking a thoughtful follow-up question based on the interviewee's response but tryin to keep the focus on AI. Be concise and avoid pleasantries that might be redundant."
             system_content += "Do not repeat previous questions, information, or introduce topics from upcoming main questions. Avoid redundant pleasantries."
         elif response_type == "next_question":
             system_content += "Provide a brief, natural transition to the next main question, considering the context of previous questions and responses. Avoid repeating information or using redundant pleasantries."
@@ -36,16 +36,17 @@ def generate_response(prompt, response_type, conversation_history):
     except Exception as e:
         st.error(f"An error occurred while generating the response: {str(e)}")
         return None
-st.title("AI-Powered Interview Bot")
+st.title("AI-Powered Interview")
 # List of interview questions (same as before, but in British English)
 interview_questions = [
     "Could you briefly introduce yourself and your role in higher education?",
     "what is your particular interest with AI technologies and their applications in education?",
+    "Do you believe AI has the potential to transform higher education?",
     "In what ways do you think AI can enhance the learning experience for students?",
     "What impact do you think AI will have on assessment methods in higher education?"
     "What ethical considerations should be taken into account when implementing AI in education?",
     "What challenges do you foresee in adopting AI technologies in higher education, and how might these be addressed?",
-    "Do you believe AI has the potential to transform higher education?"
+    
 ]
 
 # Initialize session state variables
@@ -75,7 +76,7 @@ if st.button("Submit"):
         st.session_state.conversation.append({"role": "assistant", "content": feedback})
         
         # Determine next action
-        if st.session_state.follow_up_count < 2:
+        if st.session_state.follow_up_count < 1:
             # Generate follow-up question
             follow_up = generate_response(user_response, "follow_up", st.session_state.conversation)
             st.session_state.conversation.append({"role": "assistant", "content": follow_up})
