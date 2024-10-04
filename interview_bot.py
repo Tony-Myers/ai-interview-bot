@@ -3,7 +3,7 @@ from openai import OpenAI
 
 # Initialize OpenAI client with API key from Streamlit secrets
 try:
-    client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+    client = OpenAI(api_key=st.secrets["openai_api_key"])
 except KeyError:
     st.error("OpenAI API key not found in Streamlit secrets. Please check your configuration.")
     st.stop()
