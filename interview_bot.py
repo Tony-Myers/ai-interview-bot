@@ -61,20 +61,39 @@ def play_audio(file_path):
 # Function to transcribe speech
 def transcribe_speech():
     recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Listening...")
-        audio = recognizer.listen(source)
-        st.write("Processing...")
-        try:
-            text = recognizer.recognize_google(audio)
-            return text
-        except sr.UnknownValueError:
-            st.error("Sorry, I couldn't understand that.")
-            return None
-        except sr.RequestError:
-            st.error("Sorry, there was an error processing your speech.")
-            return None
-
+    
+    # List available microphones
+    print("Available microphones:")
+    for index, name in enumerate(sr.Microphone.list_microphone_names()):
+        print(f"{index}: {name}")
+    
+    # You can change this index if needed
+    mic_index = None  # None means default microphone
+    
+    try:
+        with sr.Microphone(device_index=mic_index) as source:
+            print("Adjusting for ambient noise. Please wait...")
+            recognizer.adjust_for_ambient_noise(source, duration=1)
+            print("Listening... Speak now.")
+            audio = recognizer.listen(source, timeout=10, phrase_time_limit=5)
+            print("Speech captured. Transcribing...")
+        
+        text = recognizer.recognize_google(audio)
+        print(f"Transcribed text: {text}")
+        return text
+    except sr.WaitTimeoutError:
+        print("No speech detected within the timeout period.")
+        return ""
+    except sr.RequestError as e:
+        print(f"Could not request results from Google Speech Recognition service; {e}")
+        return ""
+    except sr.UnknownValueError:
+        print("Google Speech Recognition could not understand audio")
+        return ""
+    except Exception as e:
+        print(f"An error occurred during speech recognition: {e}")
+        return ""
+    
 # Streamlit app
 st.title("AI Interviewer with Speech Interaction")
 
