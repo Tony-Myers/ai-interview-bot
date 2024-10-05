@@ -1,114 +1,117 @@
 import streamlit as st
 from openai import OpenAI
-import os
 import base64
+import speech_recognition as sr
+from gtts import gTTS
+import os
+import tempfile
+import pygame
 
-# Function to get API key (same as before)
-api_key = st.secrets.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
+# Function to get API key
+api_key = st.secrets.get("openai_api_key")
 
-# Initialize OpenAI client (same as before)
+# Initialize OpenAI client
 client = OpenAI(api_key=api_key)
 
-# Function to generate a response
+# Initialize speech recognizer
+recognizer = sr.Recognizer()
+
+# Function to generate a response (same as before)
 def generate_response(prompt, response_type, conversation_history):
-    try:
-        system_content = ("You are an experienced and considerate interviewer in higher education, focusing on AI applications. "
-                          "Use British English in your responses, including British spellings (e.g., 'democratised' instead of 'democratized'). "
-                          "Ensure your responses are complete and not truncated. ")
-        if response_type == "feedback":
-            system_content += "Provide a brief, insightful feedback on the interviewee's response before asking a thoughtful follow-up question based on the interviewee's response but tryin to keep the focus on AI. Be concise and avoid pleasantries that might be redundant."
-            system_content += "Do not repeat previous questions, information, or introduce topics from upcoming main questions. Avoid redundant pleasantries."
-        elif response_type == "next_question":
-            system_content += "Provide a brief, natural transition to the next main question, considering the context of previous questions and responses. Avoid repeating information or using redundant pleasantries."
+    # ... (keep the existing function as is)
 
-        messages = [
-            {"role": "system", "content": system_content},
-            *conversation_history[-4:],  # Only include the last 4 exchanges for context
-            {"role": "user", "content": prompt}
-        ]
+# Function to convert text to speech
+def text_to_speech(text):
+    tts = gTTS(text=text, lang='en-gb')
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+        tts.save(fp.name)
+        return fp.name
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini-2024-07-18",
-            messages=messages,
-            max_tokens=200,
-            n=1,
-            temperature=0.7,
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        st.error(f"An error occurred while generating the response: {str(e)}")
-        return None
-st.title("AI-Powered Interview")
-# List of interview questions (same as before, but in British English)
-interview_questions = [
-    "Could you briefly introduce yourself and your role in higher education?",
-    "what is your particular interest with AI technologies and their applications in education?",
-    "Do you believe AI has the potential to transform higher education?",
-    "In what ways do you think AI can enhance the learning experience for students?",
-    "What impact do you think AI will have on assessment methods in higher education?"
-    "What ethical considerations should be taken into account when implementing AI in education?",
-    "What challenges do you foresee in adopting AI technologies in higher education, and how might these be addressed?",
-    
-]
+# Function to play audio
+def play_audio(file_path):
+    pygame.mixer.init()
+    pygame.mixer.music.load(file_path)
+    pygame.mixer.music.play()
+    while pygame.mixer.music.get_busy():
+        pygame.time.Clock().tick(10)
+    pygame.mixer.quit()
 
-# Initialize session state variables
+# Function to transcribe speech
+def transcribe_speech():
+    with sr.Microphone() as source:
+        st.write("Listening...")
+        audio = recognizer.listen(source)
+        st.write("Processing...")
+        try:
+            text = recognizer.recognize_google(audio)
+            return text
+        except sr.UnknownValueError:
+            st.error("Sorry, I couldn't understand that.")
+            return None
+        except sr.RequestError:
+            st.error("Sorry, there was an error processing your speech.")
+            return None
+
+# Streamlit app
+st.title("AI Interviewer with Speech Interaction")
+
+# Initialize session state
+if 'conversation' not in st.session_state:
+    st.session_state.conversation = []
 if 'current_question' not in st.session_state:
     st.session_state.current_question = 0
 if 'follow_up_count' not in st.session_state:
     st.session_state.follow_up_count = 0
-if 'conversation' not in st.session_state:
-    st.session_state.conversation = []
 if 'ai_prompt' not in st.session_state:
     st.session_state.ai_prompt = interview_questions[0]
 
 # Display current AI prompt
-st.write("AI Interviewer:", st.session_state.ai_prompt)
+st.write("AI: " + st.session_state.ai_prompt)
 
-# Get user input
-user_response = st.text_area("Your response:", key=f"response_{st.session_state.current_question}_{st.session_state.follow_up_count}")
+# Text-to-speech for AI prompt
+if st.button("Listen to the question"):
+    audio_file = text_to_speech(st.session_state.ai_prompt)
+    play_audio(audio_file)
+    os.unlink(audio_file)
 
-# Submit button
-if st.button("Submit"):
+# Speech-to-text for user response
+if st.button("Speak your answer"):
+    user_response = transcribe_speech()
     if user_response:
+        st.write("You said: " + user_response)
+        
         # Add user response to conversation
         st.session_state.conversation.append({"role": "user", "content": user_response})
         
-        # Generate AI feedback
-        feedback = generate_response(user_response, "feedback", st.session_state.conversation)
-        st.session_state.conversation.append({"role": "assistant", "content": feedback})
+        # Generate AI response
+        is_follow_up = st.session_state.follow_up_count < 2
+        ai_response = generate_response(user_response, "follow_up" if is_follow_up else "next_question", st.session_state.conversation)
         
-        # Determine next action
-        if st.session_state.follow_up_count < 1:
-            # Generate follow-up question
-            follow_up = generate_response(user_response, "follow_up", st.session_state.conversation)
-            st.session_state.conversation.append({"role": "assistant", "content": follow_up})
-            st.session_state.ai_prompt = follow_up
-            st.session_state.follow_up_count += 1
-        else:
-            # Move to next main question
-            st.session_state.current_question += 1
-            st.session_state.follow_up_count = 0
-            if st.session_state.current_question < len(interview_questions):
-                next_question = interview_questions[st.session_state.current_question]
-                transition = generate_response(next_question, "next_question", st.session_state.conversation)
-                st.session_state.ai_prompt = f"{transition} {next_question}"
+        if ai_response:
+            st.session_state.conversation.append({"role": "assistant", "content": ai_response})
+            
+            if is_follow_up:
+                st.session_state.follow_up_count += 1
+                st.session_state.ai_prompt = ai_response
             else:
-                st.session_state.ai_prompt = "Thank you for completing the interview! Do you have any final thoughts or questions?"
-        
-        st.rerun()
-    else:
-        st.warning("Please provide a response before submitting.")
+                st.session_state.current_question += 1
+                st.session_state.follow_up_count = 0
+                if st.session_state.current_question < len(interview_questions):
+                    transition = generate_response(user_response, "next_question", st.session_state.conversation)
+                    st.session_state.ai_prompt = f"{transition} {interview_questions[st.session_state.current_question]}"
+                else:
+                    st.session_state.ai_prompt = "Thank you for completing the interview! Do you have any final thoughts or questions?"
+            
+            st.experimental_rerun()
 
 # Display conversation history
 st.write("Conversation History:")
 for message in st.session_state.conversation:
     st.write(f"{message['role'].capitalize()}: {message['content']}")
 
-# Function to create a downloadable link for the conversation
+# Function to create a downloadable link for the conversation (same as before)
 def get_conversation_download_link():
-    conversation_text = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in st.session_state.conversation])
-    b64 = base64.b64encode(conversation_text.encode()).decode()
-    return f'<a href="data:text/plain;base64,{b64}" download="interview_conversation.txt">Download Conversation</a>'
+    # ... (keep the existing function as is)
 
 # Add download button for the conversation
 if st.session_state.conversation:
