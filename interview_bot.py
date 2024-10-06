@@ -1,12 +1,12 @@
 import streamlit as st
 from openai import OpenAI
 
-# Initialize OpenAI client
-client = OpenAI(api_key=st.secrets["openai_api_key"])
-
 # Function to generate a response
-def generate_response(prompt, response_type, conversation_history):
+def generate_response(prompt, response_type="feedback", conversation_history=None):
     try:
+        if conversation_history is None:
+            conversation_history = []
+
         system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses, including spellings like 'democratised'. Ensure your responses are complete and not truncated. "
         if response_type == "feedback":
             system_content += "Provide a brief, insightful feedback on the interviewee's response without asking a new question or repeating information. Be concise and avoid pleasantries that might be redundant."
@@ -21,98 +21,103 @@ def generate_response(prompt, response_type, conversation_history):
             {"role": "user", "content": prompt}
         ]
 
-        # Try the newer API first
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                max_tokens=120,
-                n=1,
-                temperature=0.7,
-            )
-            return response.choices[0].message.content
-        except AttributeError:
-            # If the newer API fails, fall back to the older API
-            response = client.completions.create(
-                model="gpt-4",
-                prompt="\n".join([f"{msg['role']}: {msg['content']}" for msg in messages]),
-                max_tokens=120,
-                n=1,
-                temperature=0.7,
-            )
-            return response.choices[0].text.strip()
-
+        client = OpenAI(api_key=st.secrets["openai_api_key"])
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            max_tokens=120,
+            n=1,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        return "I apologize, but I encountered an error. Could you please rephrase your response or try again?"
-
-# List of interview questions
-interview_questions = [
-    "Can you briefly introduce yourself and your role in higher education?",
-    "How familiar are you with AI technologies and their applications in education?",
-    "Do you believe AI has the potential to transform higher education? If so, how?",
-    "In what ways do you think AI can enhance the learning experience for students?"
-]
+        return f"An error occurred in generate_response: {str(e)}"
 
 # Streamlit app
-st.title("AI Interview: AI in Higher Education")
+def main():
+    st.title("AI in Education Interview Bot")
 
-# Initialize session state for question index and conversation history
-if 'question_index' not in st.session_state:
-    st.session_state.question_index = 0
-if 'conversation' not in st.session_state:
-    st.session_state.conversation = []
+    # Check if API key is set in secrets
+    if "openai_api_key" not in st.secrets:
+        st.error("OpenAI API Key is not set in Streamlit secrets. Please add it to continue.")
+        st.stop()
 
-# Display current question
-if st.session_state.question_index < len(interview_questions):
-    current_question = interview_questions[st.session_state.question_index]
-    st.write(f"Question {st.session_state.question_index + 1}: {current_question}")
+    # Initialize session state
+    if "question_index" not in st.session_state:
+        st.session_state.question_index = 0
+    if "conversation" not in st.session_state:
+        st.session_state.conversation = []
+    if "consent_given" not in st.session_state:
+        st.session_state.consent_given = False
 
-    # User input
-    user_answer = st.text_area("Your Answer:", height=150)
+    # Consent radio button
+    consent = st.radio(
+        "I have read the information sheet and give my written informed consent for my interview data to be used.",
+        ("No", "Yes")
+    )
+    st.session_state.consent_given = (consent == "Yes")
 
-    if st.button("Submit Answer"):
-        if user_answer:
-            # Add user's answer to conversation history
-            st.session_state.conversation.append(f"Q: {current_question}\nA: {user_answer}")
+    if st.session_state.consent_given:
+        # Main interview questions
+        questions = [
+            "What do you think are the main benefits of using AI in higher education?",
+            "What potential challenges or risks do you foresee with the integration of AI in education?",
+            "How do you think AI might change the role of educators in the future?",
+            "What ethical considerations should be taken into account when implementing AI in education?",
+            "How might AI impact the assessment and evaluation of students' work?",
+        ]
 
-            # Generate AI response
-            conversation_history = "\n\n".join(st.session_state.conversation)
-            ai_prompt = f"Based on the following conversation, provide a thoughtful response and a follow-up question as an experienced interviewer:\n\n{conversation_history}\n\nInterviewer response:"
-            ai_response = generate_response(ai_prompt)
+        if st.session_state.question_index < len(questions):
+            current_question = questions[st.session_state.question_index]
+            st.write(f"Question {st.session_state.question_index + 1}: {current_question}")
 
-            st.write("Interviewer's Response:")
-            st.write(ai_response)
+            # User input
+            user_answer = st.text_area("Your Answer:", height=150)
 
-            # Add AI's response to conversation history
-            st.session_state.conversation.append(f"Interviewer: {ai_response}")
+            if st.button("Submit Answer"):
+                if user_answer:
+                    # Add user's answer to conversation history
+                    st.session_state.conversation.append({"role": "user", "content": f"Q: {current_question}\nA: {user_answer}"})
 
-            # Move to next question
-            st.session_state.question_index += 1
+                    # Generate AI response
+                    conversation_history = st.session_state.conversation
+                    ai_prompt = f"Based on the following conversation, provide a thoughtful response and a follow-up question as an experienced interviewer:\n\n{conversation_history}\n\nInterviewer response:"
+                    ai_response = generate_response(ai_prompt, "feedback", conversation_history)
+
+                    st.write("Interviewer's Response:")
+                    st.write(ai_response)
+
+                    # Add AI's response to conversation history
+                    st.session_state.conversation.append({"role": "assistant", "content": ai_response})
+
+                    # Move to next question
+                    st.session_state.question_index += 1
+                else:
+                    st.warning("Please provide an answer before submitting.")
+
+            # Option to skip to the next question
+            if st.button("Skip to Next Question"):
+                st.session_state.question_index += 1
+                st.experimental_rerun()
+
         else:
-            st.warning("Please provide an answer before submitting.")
+            st.success("Interview completed! Thank you for your insights on AI in higher education.")
 
-    # Option to skip to the next question
-    if st.button("Skip to Next Question"):
-        st.session_state.question_index += 1
-        st.experimental_rerun()
+        # Display conversation history
+        if st.checkbox("Show Interview Transcript"):
+            st.write("Interview Transcript:")
+            for entry in st.session_state.conversation:
+                st.write(f"{entry['role'].capitalize()}: {entry['content']}")
+                st.write("---")
 
-else:
-    st.success("Interview completed! Thank you for your insights on AI in higher education.")
+        # Option to restart the interview
+        if st.button("Restart Interview"):
+            st.session_state.question_index = 0
+            st.session_state.conversation = []
+            st.experimental_rerun()
 
-# Display conversation history
-if st.checkbox("Show Interview Transcript"):
-    st.write("Interview Transcript:")
-    for entry in st.session_state.conversation:
-        st.write(entry)
-        st.write("---")
+    else:
+        st.warning("Please provide your consent to proceed with the interview.")
 
-# Option to restart the interview
-if st.button("Restart Interview"):
-    st.session_state.question_index = 0
-    st.session_state.conversation = []
-    st.experimental_rerun()
-# Display conversation history
-st.write("Conversation History:")
-for message in st.session_state.conversation:
-    st.write(f"{message['role'].capitalize()}: {message['content']}")
+if __name__ == "__main__":
+    main()
