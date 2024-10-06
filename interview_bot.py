@@ -28,9 +28,9 @@ def generate_response(prompt, response_type="feedback", conversation_history=Non
 
         client = OpenAI(api_key=st.secrets["openai_api_key"])
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
-            max_tokens=150,
+            max_tokens=120,
             n=1,
             temperature=0.7,
         )
