@@ -73,11 +73,11 @@ def main():
     if st.session_state.consent_given:
         # Main interview questions
         questions = [
-            "What do you think are the main benefits of using AI in higher education?",
-            "What potential challenges or risks do you foresee with the integration of AI in education?",
-            "How do you think AI might change the role of educators in the future?",
-            "What ethical considerations should be taken into account when implementing AI in education?",
-            "How might AI impact the assessment and evaluation of students' work?",
+            "Can you tell me about your background and interest in AI?",
+            "What do you think are the most significant challenges in AI today?",
+            "How do you envision AI impacting education in the next decade?",
+            "Can you discuss an AI project you've worked on or find particularly interesting?",
+            "What ethical considerations do you think are most important in AI development?",
         ]
 
         if st.session_state.question_index < len(questions):
