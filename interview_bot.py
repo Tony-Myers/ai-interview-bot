@@ -12,7 +12,39 @@ interview_questions = [
     "Do you believe AI has the potential to transform higher education?"
 ]
 
-# ... (keep the generate_response and get_transcript_download_link functions as they were)
+def generate_response(prompt, response_type="feedback", conversation_history=None):
+    try:
+        if conversation_history is None:
+            conversation_history = []
+
+        system_content = """You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses, including spellings like 'democratised'. Ensure your responses are complete and not truncated. 
+        After each user response, provide brief feedback and ask a relevant follow-up probing question based on their answer. Avoid duplicating topics from the main interview questions."""
+        
+        messages = [
+            {"role": "system", "content": system_content},
+            {"role": "system", "content": f"Full list of interview questions: {interview_questions}"},
+            *conversation_history[-4:],  # Include the last 4 exchanges for context
+            {"role": "user", "content": prompt}
+        ]
+
+        client = OpenAI(api_key=st.secrets["openai_api_key"])
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            max_tokens=200,
+            n=1,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"An error occurred in generate_response: {str(e)}"
+
+def get_transcript_download_link(conversation):
+    df = pd.DataFrame(conversation)
+    csv = df.to_csv(index=False)
+    csv_bytes = csv.encode()
+    b64 = base64.b64encode(csv_bytes).decode()
+    return f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Interview Transcript</a>'
 
 def main():
     st.title("AI in Education Interview Bot")
@@ -58,10 +90,9 @@ def main():
                     st.session_state.conversation.append({"role": "user", "content": f"Q{st.session_state.question_index + 1}: {user_answer}"})
                     
                     # Generate AI response (feedback and follow-up question)
-                    ai_prompt = f"Provide feedback on the following answer and ask a follow-up probing question:\n\nUser's answer: {user_answer}"
+                    ai_prompt = f"The user's response to question {st.session_state.question_index + 1} is: {user_answer}\nPlease provide feedback and ask a follow-up question."
                     ai_response = generate_response(ai_prompt, "feedback", st.session_state.conversation)
                     
-                    # Display AI's feedback and follow-up question
                     st.write("AI Feedback and Follow-up:")
                     st.write(ai_response)
                     
