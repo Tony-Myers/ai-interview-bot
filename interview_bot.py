@@ -69,9 +69,8 @@ def main():
     st.write("""
     Before we begin, please read the information sheet provided and understand that by ticking yes, 
     you will be giving your written informed consent for your responses to be used for research purposes 
-    and may be anonymously quoted in publications. 
-    
-    You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by 
+    and may be anonymously quoted in publications. You can choose to end the interview at any time and 
+    request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by 
     an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
     """)
 
@@ -91,36 +90,40 @@ def main():
             st.session_state.current_question = interview_questions[st.session_state.question_index]
             st.write(st.session_state.current_question)
 
-            # Display follow-up question if there is one
+            # Display follow-up question if it exists
             if st.session_state.follow_up_question:
                 st.write("Follow-up question:")
                 st.write(st.session_state.follow_up_question)
 
-            # User input
-            user_input = st.text_area("Your response:", value=st.session_state.user_input, key=f"user_input_{st.session_state.question_index}")
-            
+            # Get user input
+            user_answer = st.text_area("Your response:", value=st.session_state.user_input, key="user_input")
+
             if st.button("Submit Answer"):
-                if user_input:
+                if user_answer:
                     # Add user's answer to conversation history
-                    st.session_state.conversation.append({"role": "user", "content": f"Q{st.session_state.question_index + 1}: {user_input}"})
-                    
+                    st.session_state.conversation.append({"role": "user", "content": user_answer})
+
                     # Generate AI response
-                    ai_prompt = f"User's response to Q{st.session_state.question_index + 1}: {user_input}\nProvide feedback and ask a follow-up question."
+                    ai_prompt = f"User's answer: {user_answer}\nProvide feedback and ask a follow-up question."
                     ai_response = generate_response(ai_prompt, "feedback", st.session_state.conversation)
-                    
-                    # Split AI response into feedback and follow-up question
-                    feedback, follow_up = ai_response.split("\n", 1) if "\n" in ai_response else (ai_response, "")
-                    
-                    # Add AI's feedback to conversation history
-                    st.session_state.conversation.append({"role": "assistant", "content": feedback})
-                    
-                    # Set follow-up question
-                    st.session_state.follow_up_question = follow_up
-                    st.session_state.awaiting_follow_up = True
-                    
-                    # Clear the user input
+
+                    # Add AI's response to conversation history
+                    st.session_state.conversation.append({"role": "assistant", "content": ai_response})
+
+                    # Extract feedback and follow-up question
+                    feedback, follow_up = ai_response.split("\n", 1)
+                    st.session_state.follow_up_question = follow_up.strip()
+
+                    # Display AI feedback
+                    st.write("AI Feedback:")
+                    st.write(feedback)
+
+                    # Clear the user input and prepare for the next question
                     st.session_state.user_input = ""
-                    
+                    if not st.session_state.awaiting_follow_up:
+                        st.session_state.question_index += 1
+                    st.session_state.awaiting_follow_up = not st.session_state.awaiting_follow_up
+
                     st.rerun()
                 else:
                     st.warning("Please provide an answer before submitting.")
