@@ -5,13 +5,46 @@ from openai import OpenAI
 client = OpenAI(api_key=st.secrets["openai_api_key"])
 
 # Function to generate a response
-def generate_response(prompt):
-    response = client.chat.completions.create(
-        model="gpt-4-1106-preview",
-        messages=[{"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
-                  {"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+def generate_response(prompt, response_type, conversation_history):
+    try:
+        system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses, including spellings like 'democratised'. Ensure your responses are complete and not truncated. "
+        if response_type == "feedback":
+            system_content += "Provide a brief, insightful feedback on the interviewee's response without asking a new question or repeating information. Be concise and avoid pleasantries that might be redundant."
+        elif response_type == "follow_up":
+            system_content += "Provide a thoughtful follow-up question based on the interviewee's response. Do not repeat previous questions, information, or introduce topics from upcoming main questions. Avoid redundant pleasantries."
+        elif response_type == "next_question":
+            system_content += "Provide a brief, natural transition to the next main question, considering the context of previous questions and responses. Avoid repeating information or using redundant pleasantries."
+
+        messages = [
+            {"role": "system", "content": system_content},
+            *conversation_history[-4:],  # Only include the last 4 exchanges for context
+            {"role": "user", "content": prompt}
+        ]
+
+        # Try the newer API first
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=messages,
+                max_tokens=120,
+                n=1,
+                temperature=0.7,
+            )
+            return response.choices[0].message.content
+        except AttributeError:
+            # If the newer API fails, fall back to the older API
+            response = client.completions.create(
+                model="gpt-4",
+                prompt="\n".join([f"{msg['role']}: {msg['content']}" for msg in messages]),
+                max_tokens=120,
+                n=1,
+                temperature=0.7,
+            )
+            return response.choices[0].text.strip()
+
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        return "I apologize, but I encountered an error. Could you please rephrase your response or try again?"
 
 # List of interview questions
 interview_questions = [
@@ -79,5 +112,19 @@ if st.button("Restart Interview"):
     st.session_state.question_index = 0
     st.session_state.conversation = []
     st.experimental_rerun()
+# Display conversation history
+st.write("Conversation History:")
+for message in st.session_state.conversation:
+    st.write(f"{message['role'].capitalize()}: {message['content']}")
+
+# Function to create a downloadable link for the conversation
+def get_conversation_download_link():
+    conversation_text = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in st.session_state.conversation])
+    b64 = base64.b64encode(conversation_text.encode()).decode()
+    return f'<a href="data:text/plain;base64,{b64}" download="interview_conversation.txt">Download Conversation</a>'
+
+# Add download button for the conversation
+if st.session_state.conversation:
+    st.markdown(get_conversation_download_link(), unsafe_allow_html=True)
 
 
