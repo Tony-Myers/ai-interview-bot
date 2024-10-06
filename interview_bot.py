@@ -56,6 +56,12 @@ def main():
         st.session_state.question_index = 0
     if 'conversation' not in st.session_state:
         st.session_state.conversation = []
+    if 'current_question' not in st.session_state:
+        st.session_state.current_question = ""
+    if 'follow_up_question' not in st.session_state:
+        st.session_state.follow_up_question = ""
+    if 'awaiting_follow_up' not in st.session_state:
+        st.session_state.awaiting_follow_up = False
 
     # Display consent information and get user consent
     st.write("""
@@ -63,8 +69,7 @@ def main():
     you will be giving your written informed consent for your responses to be used for research purposes 
     and may be anonymously quoted in publications. 
     
-    You can choose to end the interview at any time and 
-    request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by 
+    You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by 
     an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
     """)
 
@@ -74,14 +79,22 @@ def main():
         st.session_state.consent_given = True
     else:
         st.session_state.consent_given = False
-        st.write("You must consent to participate in the interview. If you do not wish to participate, you may close this window.")
+        st.write("You must consent to participate in the interview.")
         return
 
     if st.session_state.consent_given:
         if st.session_state.question_index < len(interview_questions):
+            # Display the current question
             st.subheader(f"Question {st.session_state.question_index + 1}")
-            st.write(interview_questions[st.session_state.question_index])
+            st.session_state.current_question = interview_questions[st.session_state.question_index]
+            st.write(st.session_state.current_question)
             
+            # Display follow-up question if it exists
+            if st.session_state.follow_up_question:
+                st.write("Follow-up question:")
+                st.write(st.session_state.follow_up_question)
+
+            # Get user's response
             user_answer = st.text_area("Your response:", key=f"user_input_{st.session_state.question_index}")
             
             if st.button("Submit Answer"):
@@ -89,35 +102,36 @@ def main():
                     # Add user's answer to conversation history
                     st.session_state.conversation.append({"role": "user", "content": f"Q{st.session_state.question_index + 1}: {user_answer}"})
                     
-                    # Generate AI response (feedback and follow-up question)
-                    ai_prompt = f"The user's response to question {st.session_state.question_index + 1} is: {user_answer}\nPlease provide feedback and ask a follow-up question."
-                    ai_response = generate_response(ai_prompt, "feedback", st.session_state.conversation)
+                    if not st.session_state.awaiting_follow_up:
+                        # Generate AI response and follow-up question
+                        ai_prompt = f"The user's response to the question '{st.session_state.current_question}' was: {user_answer}. Please provide feedback and ask a follow-up question."
+                        ai_response = generate_response(ai_prompt, "feedback", st.session_state.conversation)
+                        
+                        # Add AI's response to conversation history
+                        st.session_state.conversation.append({"role": "assistant", "content": ai_response})
+                        
+                        # Extract follow-up question from AI response
+                        feedback, follow_up = ai_response.split("Follow-up question:", 1) if "Follow-up question:" in ai_response else (ai_response, "")
+                        st.session_state.follow_up_question = follow_up.strip()
+                        
+                        st.session_state.awaiting_follow_up = True
+                    else:
+                        # Move to next question
+                        st.session_state.question_index += 1
+                        st.session_state.follow_up_question = ""
+                        st.session_state.awaiting_follow_up = False
                     
-                    st.write("AI Feedback and Follow-up:")
-                    st.write(ai_response)
-                    
-                    # Add AI's response to conversation history
-                    st.session_state.conversation.append({"role": "assistant", "content": ai_response})
-
-                    # Wait for user's response to the follow-up question
-                    follow_up_answer = st.text_area("Your response to the follow-up:", key=f"follow_up_{st.session_state.question_index}")
-                    
-                    if st.button("Submit Follow-up Answer"):
-                        if follow_up_answer:
-                            # Add user's follow-up answer to conversation history
-                            st.session_state.conversation.append({"role": "user", "content": f"Follow-up A: {follow_up_answer}"})
-                            
-                            # Move to next question
-                            st.session_state.question_index += 1
-                            st.rerun()
-                        else:
-                            st.warning("Please provide an answer to the follow-up question before submitting.")
+                    # Clear the response box
+                    st.session_state[f"user_input_{st.session_state.question_index}"] = ""
+                    st.rerun()
                 else:
                     st.warning("Please provide an answer before submitting.")
 
             # Option to skip to the next question
             if st.button("Skip to Next Question"):
                 st.session_state.question_index += 1
+                st.session_state.follow_up_question = ""
+                st.session_state.awaiting_follow_up = False
                 st.rerun()
 
         else:
