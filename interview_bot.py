@@ -116,15 +116,3 @@ if st.button("Restart Interview"):
 st.write("Conversation History:")
 for message in st.session_state.conversation:
     st.write(f"{message['role'].capitalize()}: {message['content']}")
-
-# Function to create a downloadable link for the conversation
-def get_conversation_download_link():
-    conversation_text = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in st.session_state.conversation])
-    b64 = base64.b64encode(conversation_text.encode()).decode()
-    return f'<a href="data:text/plain;base64,{b64}" download="interview_conversation.txt">Download Conversation</a>'
-
-# Add download button for the conversation
-if st.session_state.conversation:
-    st.markdown(get_conversation_download_link(), unsafe_allow_html=True)
-
-
