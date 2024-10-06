@@ -1,86 +1,83 @@
 import streamlit as st
 from openai import OpenAI
 
-# Initialize OpenAI client with API key from Streamlit secrets
-try:
-    client = OpenAI(api_key=st.secrets["openai_api_key"])
-except KeyError:
-    st.error("OpenAI API key not found in Streamlit secrets. Please check your configuration.")
-    st.stop()
+# Initialize OpenAI client
+client = OpenAI(api_key=st.secrets["openai_api_key"])
 
 # Function to generate a response
 def generate_response(prompt):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4",  # Make sure this is the correct model name
-            messages=[
-                {"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=150,
-            n=1,
-            temperature=0.7,
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        st.error(f"An error occurred while generating the response: {str(e)}")
-        return None
+    response = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=[{"role": "system", "content": "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Provide thoughtful follow-up questions and comments based on the interviewee's responses."},
+                  {"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
 
 # List of interview questions
 interview_questions = [
     "Can you briefly introduce yourself and your role in higher education?",
     "How familiar are you with AI technologies and their applications in education?",
     "Do you believe AI has the potential to transform higher education? If so, how?",
-    "In what ways do you think AI can enhance the learning experience for students?",
-    "What ethical considerations should be taken into account when implementing AI in education?",
-    "How do you envision the role of educators evolving with the integration of AI in higher education?",
-    "Can you share any specific examples or case studies of successful AI implementation in your institution or others you're familiar with?",
-    "What challenges do you foresee in adopting AI technologies in higher education, and how might these be addressed?",
-    "How do you think AI can be used to personalize learning experiences for students?",
-    "What skills do you think educators and students need to develop to effectively work with AI in education?"
+    "In what ways do you think AI can enhance the learning experience for students?"
 ]
 
-# Initialize session state
-if 'current_question' not in st.session_state:
-    st.session_state.current_question = 0
+# Streamlit app
+st.title("AI Interview: AI in Higher Education")
+
+# Initialize session state for question index and conversation history
+if 'question_index' not in st.session_state:
+    st.session_state.question_index = 0
 if 'conversation' not in st.session_state:
     st.session_state.conversation = []
-if 'ai_prompt' not in st.session_state:
-    st.session_state.ai_prompt = interview_questions[0]
 
-# Display current AI prompt
-st.write("AI Interviewer:", st.session_state.ai_prompt)
+# Display current question
+if st.session_state.question_index < len(interview_questions):
+    current_question = interview_questions[st.session_state.question_index]
+    st.write(f"Question {st.session_state.question_index + 1}: {current_question}")
 
-# Get user input
-user_response = st.text_area("Your response:")
+    # User input
+    user_answer = st.text_area("Your Answer:", height=150)
 
-# Submit button
-if st.button("Submit"):
-    if user_response:
-        # Add user response to conversation
-        st.session_state.conversation.append({"role": "user", "content": user_response})
-        
-        # Generate AI response
-        ai_response = generate_response(user_response)
-        if ai_response:
-            st.session_state.conversation.append({"role": "assistant", "content": ai_response})
-            
-            # Move to next question or use AI response as prompt
-            st.session_state.current_question += 1
-            if st.session_state.current_question < len(interview_questions):
-                st.session_state.ai_prompt = ai_response
-            else:
-                st.session_state.ai_prompt = "Thank you for completing the interview! Do you have any final thoughts or questions?"
-            
-            st.rerun()
-    else:
-        st.warning("Please provide a response before submitting.")
+    if st.button("Submit Answer"):
+        if user_answer:
+            # Add user's answer to conversation history
+            st.session_state.conversation.append(f"Q: {current_question}\nA: {user_answer}")
+
+            # Generate AI response
+            conversation_history = "\n\n".join(st.session_state.conversation)
+            ai_prompt = f"Based on the following conversation, provide a thoughtful response and a follow-up question as an experienced interviewer:\n\n{conversation_history}\n\nInterviewer response:"
+            ai_response = generate_response(ai_prompt)
+
+            st.write("Interviewer's Response:")
+            st.write(ai_response)
+
+            # Add AI's response to conversation history
+            st.session_state.conversation.append(f"Interviewer: {ai_response}")
+
+            # Move to next question
+            st.session_state.question_index += 1
+        else:
+            st.warning("Please provide an answer before submitting.")
+
+    # Option to skip to the next question
+    if st.button("Skip to Next Question"):
+        st.session_state.question_index += 1
+        st.experimental_rerun()
+
+else:
+    st.success("Interview completed! Thank you for your insights on AI in higher education.")
 
 # Display conversation history
-st.write("Conversation History:")
-for message in st.session_state.conversation:
-    st.write(f"{message['role'].capitalize()}: {message['content']}")
+if st.checkbox("Show Interview Transcript"):
+    st.write("Interview Transcript:")
+    for entry in st.session_state.conversation:
+        st.write(entry)
+        st.write("---")
 
-# Main execution
-if __name__ == "__main__":
-    print("Streamlit app is ready to run. Use 'streamlit run <filename>.py' to start the app.")
+# Option to restart the interview
+if st.button("Restart Interview"):
+    st.session_state.question_index = 0
+    st.session_state.conversation = []
+    st.experimental_rerun()
+
+
