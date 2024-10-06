@@ -63,7 +63,7 @@ def main():
 
     # Consent form
     if not st.session_state.consent_given:
-        st.write("Before we begin, please read and agree to the following:")
+        st.write("Before we begin, please read the information sheet provided and understamd that by agreeing to participate you are providing your written informed consent to the following:")
         st.write("This interview will be conducted by an AI assistant. Your responses will be used for research purposes and may be anonymously quoted in publications. You can choose to end the interview at any time.")
         consent = st.radio("Do you agree to participate in this interview?", ("Yes", "No"))
         if consent == "Yes":
