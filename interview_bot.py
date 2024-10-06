@@ -52,18 +52,17 @@ def main():
         st.error("OpenAI API Key is not set in Streamlit secrets. Please add it to continue.")
         st.stop()
 
+    # Initialize session state variables
     if "question_index" not in st.session_state:
         st.session_state.question_index = 0
     if "conversation" not in st.session_state:
         st.session_state.conversation = []
-    if "user_input" not in st.session_state:
-        st.session_state.user_input = ""
     if "consent_given" not in st.session_state:
         st.session_state.consent_given = False
 
     # Consent form
     if not st.session_state.consent_given:
-        st.write("Before we begin, please read the information sheet provided and understamd that by agreeing to participate you are providing your written informed consent to the following:")
+        st.write("Before we begin, please read and agree to the following:")
         st.write("This interview will be conducted by an AI assistant. Your responses will be used for research purposes and may be anonymously quoted in publications. You can choose to end the interview at any time.")
         consent = st.radio("Do you agree to participate in this interview?", ("Yes", "No"))
         if consent == "Yes":
@@ -84,7 +83,7 @@ def main():
         st.write(f"Question {st.session_state.question_index + 1}: {current_question}")
 
         # User input
-        user_answer = st.text_area("Your Answer:", value=st.session_state.user_input, height=150, key="user_input")
+        user_answer = st.text_area("Your Answer:", key=f"user_input_{st.session_state.question_index}")
 
         if st.button("Submit Answer"):
             if user_answer:
@@ -92,15 +91,14 @@ def main():
                 st.session_state.conversation.append({"role": "user", "content": f"Q: {current_question}\nA: {user_answer}"})
 
                 # Generate AI response
-                ai_prompt = f"Based on the following conversation, provide thoughtful feedback and a follow-up question that doesn't duplicate topics from the main interview questions:\n\n{st.session_state.conversation}\n\nInterviewer response:"
+                ai_prompt = f"Based on the following conversation, provide thoughtful feedback and a follow-up question:\n\n{st.session_state.conversation}\n\nInterviewer response:"
                 ai_response = generate_response(ai_prompt, "feedback", st.session_state.conversation)
 
                 # Add AI's response to conversation history
                 st.session_state.conversation.append({"role": "assistant", "content": ai_response})
 
-                # Move to next question and clear user input
+                # Move to next question
                 st.session_state.question_index += 1
-                st.session_state.user_input = ""
                 st.experimental_rerun()
             else:
                 st.warning("Please provide an answer before submitting.")
@@ -108,7 +106,6 @@ def main():
         # Option to skip to the next question
         if st.button("Skip to Next Question"):
             st.session_state.question_index += 1
-            st.session_state.user_input = ""
             st.experimental_rerun()
 
     elif st.session_state.consent_given:
@@ -125,10 +122,8 @@ def main():
 
     # Option to restart the interview
     if st.button("Restart Interview"):
-        st.session_state.question_index = 0
-        st.session_state.conversation = []
-        st.session_state.user_input = ""
-        st.session_state.consent_given = False
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.experimental_rerun()
 
 if __name__ == "__main__":
