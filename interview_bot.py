@@ -30,7 +30,7 @@ def generate_response(prompt, response_type, conversation_history):
             {"role": "user", "content": prompt}
         ]
 
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=messages,
             max_tokens=150,
@@ -39,9 +39,9 @@ def generate_response(prompt, response_type, conversation_history):
         )
         return response.choices[0].message.content
     except Exception as e:
-        st.error(f"An error occurred while generating the response: {str(e)}")
-        return None
-
+        st.error(f"An error occurred: {str(e)}")
+        return "I apologize, but I encountered an error. Could you please rephrase your response or try again?"
+    
 # Function to convert text to speech
 def text_to_speech(text):
     tts = gTTS(text=text, lang='en-gb')
