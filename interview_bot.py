@@ -2,49 +2,14 @@ import streamlit as st
 from openai import OpenAI
 import pandas as pd
 import base64
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import base64
-
-# Initialize OpenAI client
-client = OpenAI(api_key=st.secrets["openai_api_key"])
-
-# Function to generate a response
-def generate_response(prompt, response_type, conversation_history):
-    # ... (keep the existing function as is)
-    pass
-
-# Function to send email
-def send_email(subject, body):
-    sender_email = "admyers.@aol.com"  # Replace with your email
-    receiver_email = "tony.myers@staff.newman.ac.uk"
-    password = st.secrets["email_password"]  # Store this securely
-
-    message = MIMEMultipart()
-    message["From"] = sender_email
-    message["To"] = receiver_email
-    message["Subject"] = subject
-
-    message.attach(MIMEText(body, "plain"))
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(sender_email, password)
-        server.send_message(message)
-
-# Function to get download link
-def get_download_link(text):
-    b64 = base64.b64encode(text.encode()).decode()
-    return f'<a href="data:text/plain;base64,{b64}" download="interview_transcript.txt">Download Transcript</a>'
 
 # List of interview questions
 interview_questions = [
-    "interview_questions = [
-    "Can you tell me about your background and interest in AI?",
-    "What do you think are the most significant challenges in AI today?",
-    "How do you envision AI impacting education in the next decade?",
-    "Can you discuss an AI project you've worked on or find particularly interesting?",
-    "What ethical considerations do you think are most important in AI development?"
+    "Can you briefly introduce yourself, your role in higher education and interest in AI?",
+    "How do you see AI transforming the traditional classroom experience?",
+    "In what ways do you think AI can enhance the learning experience for students?",
+    "What ethical considerations should be taken into account when implementing AI in education?",
+    "Do you believe AI has the potential to transform higher education?"
 ]
 
 def generate_response(prompt, response_type="feedback", conversation_history=None):
@@ -52,9 +17,11 @@ def generate_response(prompt, response_type="feedback", conversation_history=Non
         if conversation_history is None:
             conversation_history = []
 
-        system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses, including spellings like 'democratised'. Ensure your responses are complete and not truncated. "
+        system_content = "You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses, including spellings like 'democratised'. Ensure your responses are complete and not truncated. Be aware of the full list of interview questions to avoid duplicating topics in follow-up questions."
+        
         messages = [
             {"role": "system", "content": system_content},
+            {"role": "system", "content": f"Full list of interview questions: {interview_questions}"},
             *conversation_history[-4:],  # Include the last 4 exchanges for context
             {"role": "user", "content": prompt}
         ]
@@ -63,7 +30,7 @@ def generate_response(prompt, response_type="feedback", conversation_history=Non
         response = client.chat.completions.create(
             model="gpt-4",
             messages=messages,
-            max_tokens=120,
+            max_tokens=150,
             n=1,
             temperature=0.7,
         )
@@ -91,8 +58,21 @@ def main():
         st.session_state.conversation = []
     if "user_input" not in st.session_state:
         st.session_state.user_input = ""
+    if "consent_given" not in st.session_state:
+        st.session_state.consent_given = False
 
-    if st.session_state.question_index < len(interview_questions):
+    # Consent form
+    if not st.session_state.consent_given:
+        st.write("Before we begin, please read and agree to the following:")
+        st.write("This interview will be conducted by an AI assistant. Your responses will be used for research purposes and may be anonymously quoted in publications. You can choose to end the interview at any time.")
+        consent = st.radio("Do you agree to participate in this interview?", ("Yes", "No"))
+        if consent == "Yes":
+            st.session_state.consent_given = True
+        elif consent == "No":
+            st.write("Thank you for your time. The interview will not proceed without your consent.")
+            return
+
+    if st.session_state.consent_given and st.session_state.question_index < len(interview_questions):
         current_question = interview_questions[st.session_state.question_index]
         
         # Display AI feedback above the user input box
@@ -109,15 +89,10 @@ def main():
         if st.button("Submit Answer"):
             if user_answer:
                 # Add user's answer to conversation history
-                st.session_state.conversation.append({"role": "user", "content": f"Q: {current_question}\
-A: {user_answer}"})
+                st.session_state.conversation.append({"role": "user", "content": f"Q: {current_question}\nA: {user_answer}"})
 
                 # Generate AI response
-                ai_prompt = f"Based on the following conversation, provide thoughtful feedback and a follow-up question:\
-\
-{st.session_state.conversation}\
-\
-Interviewer response:"
+                ai_prompt = f"Based on the following conversation, provide thoughtful feedback and a follow-up question that doesn't duplicate topics from the main interview questions:\n\n{st.session_state.conversation}\n\nInterviewer response:"
                 ai_response = generate_response(ai_prompt, "feedback", st.session_state.conversation)
 
                 # Add AI's response to conversation history
@@ -136,7 +111,7 @@ Interviewer response:"
             st.session_state.user_input = ""
             st.experimental_rerun()
 
-    else:
+    elif st.session_state.consent_given:
         st.success("Interview completed! Thank you for your insights on AI in education.")
 
     # Display conversation history and download link
@@ -153,9 +128,8 @@ Interviewer response:"
         st.session_state.question_index = 0
         st.session_state.conversation = []
         st.session_state.user_input = ""
+        st.session_state.consent_given = False
         st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
-
-print("Updated app.py with original structure and new interview questions")
