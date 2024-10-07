@@ -29,7 +29,7 @@ def generate_response(prompt, conversation_history=None):
 
         client = OpenAI(api_key=st.secrets["openai_api_key"])
         response = client.chat.completions.create(
-            model="gpt-4-0613",
+            model="gpt-4o",
             messages=messages,
             max_tokens=250,
             n=1,
