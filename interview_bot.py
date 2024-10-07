@@ -3,27 +3,27 @@ from openai import OpenAI
 import pandas as pd
 import base64
 
-# List of interview questions
-interview_questions = [
-    "Can you briefly introduce yourself, your role in higher education and interest in AI?",
-    "How do you see AI transforming the traditional classroom experience?",
-    "In what ways do you think AI can enhance the learning experience for students?",
-    "What ethical considerations should be taken into account when implementing AI in education?",
-    "Do you believe AI has the potential to transform higher education?"
+# List of interview topics (instead of fixed questions)
+interview_topics = [
+    "Introduction, role in higher education, and interest in AI",
+    "AI's impact on traditional classroom experience",
+    "AI enhancing student learning experience",
+    "Ethical considerations in implementing AI in education",
+    "AI's potential to transform higher education"
 ]
 
-def generate_response(prompt, response_type="feedback", conversation_history=None):
+def generate_response(prompt, conversation_history=None):
     try:
         if conversation_history is None:
             conversation_history = []
 
         system_content = """You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses, including spellings like 'democratised'. Ensure your responses are complete and not truncated. 
-        After each user response, provide brief feedback and ask a relevant follow-up probing question based on their answer. Avoid duplicating topics from the main interview questions."""
+        After each user response, provide brief feedback and ask a relevant follow-up question based on their answer. Tailor your questions to the user's previous responses, avoiding repetition and exploring areas they haven't covered. Be adaptive and create a natural flow of conversation."""
         
         messages = [
             {"role": "system", "content": system_content},
-            {"role": "system", "content": f"Full list of interview questions: {interview_questions}"},
-            *conversation_history[-4:],  # Include the last 4 exchanges for context
+            {"role": "system", "content": f"Interview topics: {interview_topics}"},
+            *conversation_history[-6:],  # Include the last 6 exchanges for more context
             {"role": "user", "content": prompt}
         ]
 
@@ -31,7 +31,7 @@ def generate_response(prompt, response_type="feedback", conversation_history=Non
         response = client.chat.completions.create(
             model="gpt-4-0613",
             messages=messages,
-            max_tokens=200,
+            max_tokens=250,
             n=1,
             temperature=0.7,
         )
@@ -44,7 +44,7 @@ def get_transcript_download_link(conversation):
     csv = df.to_csv(index=False)
     csv_bytes = csv.encode()
     b64 = base64.b64encode(csv_bytes).decode()
-    href = f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Transcript</a>'
+    href = f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Interview Transcript</a>'
     return href
 
 def main():
@@ -53,18 +53,10 @@ def main():
     # Initialize session state variables
     if 'consent_given' not in st.session_state:
         st.session_state.consent_given = False
-    if 'question_index' not in st.session_state:
-        st.session_state.question_index = 0
     if 'conversation' not in st.session_state:
         st.session_state.conversation = []
     if 'current_question' not in st.session_state:
         st.session_state.current_question = ""
-    if 'follow_up_question' not in st.session_state:
-        st.session_state.follow_up_question = ""
-    if 'awaiting_follow_up' not in st.session_state:
-        st.session_state.awaiting_follow_up = False
-    if 'user_input' not in st.session_state:
-        st.session_state.user_input = ""
     if 'ai_feedback' not in st.session_state:
         st.session_state.ai_feedback = ""
 
@@ -72,10 +64,10 @@ def main():
     st.write("""
     Before we begin, please read the information sheet provided and understand that by ticking yes, 
     you will be giving your written informed consent for your responses to be used for research purposes 
-    and may be anonymously quoted in publications.
+    and may be anonymously quoted in publications. 
 
     You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. 
-    This interview will be conducted by an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
+    This interview will be conducted by an AI assistant who will ask questions and follow-up probes based on your responses.
     """)
 
     consent = st.radio("Do you consent to participate in this interview?", ("No", "Yes"))
@@ -88,73 +80,50 @@ def main():
         return
 
     if st.session_state.consent_given:
-        if st.session_state.question_index < len(interview_questions):
-            # Display AI feedback if it exists
-            if st.session_state.ai_feedback:
-                st.write("AI Feedback:", st.session_state.ai_feedback)
-                st.session_state.ai_feedback = ""  # Clear the feedback after displaying
+        # Display AI feedback if it exists
+        if st.session_state.ai_feedback:
+            st.write("AI Feedback:", st.session_state.ai_feedback)
+            st.session_state.ai_feedback = ""  # Clear the feedback after displaying
 
-            # Display the current question
-            st.subheader(f"Question {st.session_state.question_index + 1}")
-            st.session_state.current_question = interview_questions[st.session_state.question_index]
-            st.write(st.session_state.current_question)
+        # Display the current question
+        if not st.session_state.current_question:
+            st.session_state.current_question = "Can you briefly introduce yourself, your role in higher education, and your interest in AI?"
+        st.write(st.session_state.current_question)
 
-            # Display follow-up question if it exists
-            if st.session_state.follow_up_question:
-                st.write(st.session_state.follow_up_question)
+        # Get user input
+        user_answer = st.text_area("Your response:", key="user_input")
+        
+        if st.button("Submit Answer"):
+            if user_answer:
+                # Add user's answer to conversation history
+                st.session_state.conversation.append({"role": "user", "content": user_answer})
+                
+                # Generate AI response
+                ai_prompt = f"User's answer: {user_answer}\nProvide feedback and ask a relevant follow-up question based on the user's response and the interview topics."
+                ai_response = generate_response(ai_prompt, st.session_state.conversation)
+                
+                # Split AI response into feedback and follow-up
+                parts = ai_response.split("\n", 1)
+                feedback = parts[0]
+                follow_up = parts[1] if len(parts) > 1 else "Can you elaborate on that?"
 
-            # Get user input
-            user_answer = st.text_area("Your response:", key=f"user_input_{st.session_state.question_index}")
-            
-            if st.button("Submit Answer"):
-                if user_answer:
-                    # Add user's answer to conversation history
-                    st.session_state.conversation.append({"role": "user", "content": user_answer})
-                    
-                    # Generate AI response
-                    ai_prompt = f"User's answer: {user_answer}\nProvide feedback and ask a follow-up question."
-                    ai_response = generate_response(ai_prompt, "feedback", st.session_state.conversation)
-                    
-                    # Split AI response into feedback and follow-up
-                    parts = ai_response.split("\n", 1)
-                    feedback = parts[0]
-                    follow_up = parts[1] if len(parts) > 1 else "Can you elaborate on that?"
-
-                    # Store AI feedback for next iteration
-                    st.session_state.ai_feedback = feedback
-                    
-                    # Add AI's response to conversation history
-                    st.session_state.conversation.append({"role": "assistant", "content": ai_response})
-                    
-                    # Update follow-up question
-                    st.session_state.follow_up_question = follow_up
-                    
-                    # Toggle awaiting_follow_up
-                    st.session_state.awaiting_follow_up = not st.session_state.awaiting_follow_up
-                    
-                    # Move to next question if it's not a follow-up
-                    if not st.session_state.awaiting_follow_up:
-                        st.session_state.question_index += 1
-                        st.session_state.follow_up_question = ""
-                    
-                    # Clear the user input
-                    st.session_state.user_input = ""
-                    
-                    st.rerun()
-                else:
-                    st.warning("Please provide an answer before submitting.")
-
-            # Option to skip to the next question
-            if st.button("Skip to Next Question"):
-                st.session_state.question_index += 1
-                st.session_state.follow_up_question = ""
-                st.session_state.awaiting_follow_up = False
-                st.session_state.user_input = ""
-                st.session_state.ai_feedback = ""
+                # Store AI feedback for next iteration
+                st.session_state.ai_feedback = feedback
+                
+                # Update current question
+                st.session_state.current_question = follow_up
+                
+                # Add AI's response to conversation history
+                st.session_state.conversation.append({"role": "assistant", "content": ai_response})
+                
                 st.rerun()
+            else:
+                st.warning("Please provide an answer before submitting.")
 
-        else:
+        # Option to end the interview
+        if st.button("End Interview"):
             st.success("Interview completed! Thank you for your insights on AI in education.")
+            st.session_state.current_question = "Interview ended"
 
         # Display conversation history and download link
         if st.checkbox("Show Interview Transcript"):
