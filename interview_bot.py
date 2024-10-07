@@ -69,8 +69,9 @@ def main():
     st.write("""
     Before we begin, please read the information sheet provided and understand that by ticking yes, 
     you will be giving your written informed consent for your responses to be used for research purposes 
-    and may be anonymously quoted in publications. You can choose to end the interview at any time and 
-    request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by 
+    and may be anonymously quoted in publications. 
+    
+    You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by 
     an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
     """)
 
