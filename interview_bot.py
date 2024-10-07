@@ -60,8 +60,6 @@ def main():
         st.session_state.current_question = ""
     if 'follow_up_question' not in st.session_state:
         st.session_state.follow_up_question = ""
-    if 'awaiting_follow_up' not in st.session_state:
-        st.session_state.awaiting_follow_up = False
     if 'user_input' not in st.session_state:
         st.session_state.user_input = ""
 
@@ -93,38 +91,41 @@ def main():
 
             # Display follow-up question if it exists
             if st.session_state.follow_up_question:
-                st.write("Follow-up question:")
                 st.write(st.session_state.follow_up_question)
 
             # Get user input
-            user_answer = st.text_area("Your response:", value=st.session_state.user_input, key="user_input")
-
+            user_answer = st.text_area("Your response:", key=f"user_input_{st.session_state.question_index}")
+            
             if st.button("Submit Answer"):
                 if user_answer:
                     # Add user's answer to conversation history
                     st.session_state.conversation.append({"role": "user", "content": user_answer})
-
+                    
                     # Generate AI response
                     ai_prompt = f"User's answer: {user_answer}\nProvide feedback and ask a follow-up question."
                     ai_response = generate_response(ai_prompt, "feedback", st.session_state.conversation)
-
-                    # Add AI's response to conversation history
-                    st.session_state.conversation.append({"role": "assistant", "content": ai_response})
-
-                    # Extract feedback and follow-up question
-                    feedback, follow_up = ai_response.split("\n", 1)
-                    st.session_state.follow_up_question = follow_up.strip()
+                    
+                    # Split AI response into feedback and follow-up
+                    parts = ai_response.split("\n", 1)
+                    feedback = parts[0]
+                    follow_up = parts[1] if len(parts) > 1 else "Can you elaborate on that?"
 
                     # Display AI feedback
-                    st.write("AI Feedback:")
-                    st.write(feedback)
-
-                    # Clear the user input and prepare for the next question
+                    st.write("AI Feedback:", feedback)
+                    
+                    # Add AI's response to conversation history
+                    st.session_state.conversation.append({"role": "assistant", "content": ai_response})
+                    
+                    # Update follow-up question
+                    st.session_state.follow_up_question = follow_up
+                    
+                    # Clear the user input
                     st.session_state.user_input = ""
-                    if not st.session_state.awaiting_follow_up:
+                    
+                    # Move to next question if it's not a follow-up
+                    if st.session_state.question_index % 2 == 0:
                         st.session_state.question_index += 1
-                    st.session_state.awaiting_follow_up = not st.session_state.awaiting_follow_up
-
+                    
                     st.rerun()
                 else:
                     st.warning("Please provide an answer before submitting.")
@@ -133,7 +134,6 @@ def main():
             if st.button("Skip to Next Question"):
                 st.session_state.question_index += 1
                 st.session_state.follow_up_question = ""
-                st.session_state.awaiting_follow_up = False
                 st.session_state.user_input = ""
                 st.rerun()
 
