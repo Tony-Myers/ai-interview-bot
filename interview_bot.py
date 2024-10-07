@@ -29,9 +29,9 @@ def generate_response(prompt, response_type="feedback", conversation_history=Non
 
         client = OpenAI(api_key=st.secrets["openai_api_key"])
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4-0613",  # Changed to GPT-4-0613
             messages=messages,
-            max_tokens=140,
+            max_tokens=200,
             n=1,
             temperature=0.7,
         )
@@ -44,7 +44,7 @@ def get_transcript_download_link(conversation):
     csv = df.to_csv(index=False)
     csv_bytes = csv.encode()
     b64 = base64.b64encode(csv_bytes).decode()
-    href = f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Transcript</a>'
+    href = f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Interview Transcript</a>'
     return href
 
 def main():
@@ -65,15 +65,17 @@ def main():
         st.session_state.awaiting_follow_up = False
     if 'user_input' not in st.session_state:
         st.session_state.user_input = ""
+    if 'ai_feedback' not in st.session_state:
+        st.session_state.ai_feedback = ""
 
     # Display consent information and get user consent
     st.write("""
     Before we begin, please read the information sheet provided and understand that by ticking yes, 
     you will be giving your written informed consent for your responses to be used for research purposes 
-    and may be anonymously quoted in publications. 
-    
-    You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by 
-    an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
+    and may be anonymously quoted in publications.
+
+    You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. 
+    This interview will be conducted by an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
     """)
 
     consent = st.radio("Do you consent to participate in this interview?", ("No", "Yes"))
@@ -96,6 +98,10 @@ def main():
             if st.session_state.follow_up_question:
                 st.write(st.session_state.follow_up_question)
 
+            # Display AI feedback if it exists
+            if st.session_state.ai_feedback:
+                st.write("AI Feedback:", st.session_state.ai_feedback)
+
             # Get user input
             user_answer = st.text_area("Your response:", value=st.session_state.user_input, key=f"user_input_{st.session_state.question_index}")
             
@@ -113,8 +119,8 @@ def main():
                     feedback = parts[0]
                     follow_up = parts[1] if len(parts) > 1 else "Can you elaborate on that?"
 
-                    # Display AI feedback
-                    st.write("AI Feedback:", feedback)
+                    # Store AI feedback
+                    st.session_state.ai_feedback = feedback
                     
                     # Add AI's response to conversation history
                     st.session_state.conversation.append({"role": "assistant", "content": ai_response})
@@ -132,6 +138,7 @@ def main():
                     if not st.session_state.awaiting_follow_up:
                         st.session_state.question_index += 1
                         st.session_state.follow_up_question = ""
+                        st.session_state.ai_feedback = ""
                     
                     st.rerun()
                 else:
@@ -143,6 +150,7 @@ def main():
                 st.session_state.follow_up_question = ""
                 st.session_state.awaiting_follow_up = False
                 st.session_state.user_input = ""
+                st.session_state.ai_feedback = ""
                 st.rerun()
 
         else:
