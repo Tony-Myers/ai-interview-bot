@@ -56,9 +56,7 @@ def main():
     if 'conversation' not in st.session_state:
         st.session_state.conversation = []
     if 'current_question' not in st.session_state:
-        st.session_state.current_question = "Can you briefly introduce yourself, your role in higher education and interest in AI?"
-    if 'user_input' not in st.session_state:
-        st.session_state.user_input = ""
+        st.session_state.current_question = "Can you briefly introduce yourself, your role in higher education, and your interest in AI?"
 
     # Display consent information and get user consent
     st.write("""
@@ -85,7 +83,7 @@ def main():
         st.write(st.session_state.current_question)
 
         # Get user input
-        user_answer = st.text_area("Your response:", key="user_input", value=st.session_state.user_input)
+        user_answer = st.text_area("Your response:", key="user_input")
         
         if st.button("Submit Answer"):
             if user_answer:
@@ -102,10 +100,10 @@ def main():
                 # Update current question with AI's follow-up
                 st.session_state.current_question = ai_response
                 
-                # Clear the user input
+                # Attempt to clear the user input (this may not work due to Streamlit limitations)
                 st.session_state.user_input = ""
                 
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.warning("Please provide an answer before submitting.")
 
@@ -127,7 +125,7 @@ def main():
         if st.button("Restart Interview"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.rerun()
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
