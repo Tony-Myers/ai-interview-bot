@@ -42,49 +42,33 @@ def generate_response(prompt, conversation_history=None):
 def get_transcript_download_link(conversation):
     df = pd.DataFrame(conversation)
     csv = df.to_csv(index=False)
-    csv_bytes = csv.encode()
-    b64 = base64.b64encode(csv_bytes).decode()
-    href = f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Interview Transcript</a>'
+    b64 = base64.b64encode(csv.encode()).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Transcript</a>'
     return href
 
 def main():
-    st.title("AI in Education Interview Bot")
+    st.title("AI Interview Bot")
 
-    # Initialize session state variables
-    if 'consent_given' not in st.session_state:
-        st.session_state.consent_given = False
-    if 'conversation' not in st.session_state:
+    if "conversation" not in st.session_state:
         st.session_state.conversation = []
-    if 'current_question' not in st.session_state:
-        st.session_state.current_question = "Can you briefly introduce yourself, your role in higher education, and your interest in AI?"
+    if "current_question" not in st.session_state:
+        st.session_state.current_question = "Let's begin the interview. Can you please introduce yourself, your role in higher education, and your interest in AI?"
+    if "submitted" not in st.session_state:
+        st.session_state.submitted = False
 
-    # Display consent information and get user consent
     st.write("""
-    Before we begin, please read the information sheet provided and understand that by ticking yes, 
-    you will be giving your written informed consent for your responses to be used for research purposes 
-    and may be anonymously quoted in publications. 
-
-    You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. 
-    This interview will be conducted by an AI assistant who, along with asking set questions, 
-    will ask additional probing questions depending on your response.
+    Before we begin, please read the information sheet provided and understand that by ticking yes, you will be giving your written informed consent for your responses to be used for research purposes and may be anonymously quoted in publications.
+    
+    You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
     """)
 
-    consent = st.radio("Do you consent to participate in this interview?", ("No", "Yes"))
-    
-    if consent == "Yes":
-        st.session_state.consent_given = True
-    else:
-        st.session_state.consent_given = False
-        st.write("You must consent to participate in the interview.")
-        return
+    consent = st.checkbox("I have read the information sheet and give my consent to participate in this interview.")
 
-    if st.session_state.consent_given:
-        # Display the current question
+    if consent:
         st.write(st.session_state.current_question)
 
-        # Get user input
-        user_answer = st.text_area("Your response:", key="user_input")
-        
+        user_answer = st.text_area("Your response:", key=f"user_input_{len(st.session_state.conversation)}")
+
         if st.button("Submit Answer"):
             if user_answer:
                 # Add user's answer to conversation history
@@ -100,10 +84,10 @@ def main():
                 # Update current question with AI's follow-up
                 st.session_state.current_question = ai_response
                 
-                # Attempt to clear the user input (this may not work due to Streamlit limitations)
-                st.session_state.user_input = ""
+                # Set submitted flag to true
+                st.session_state.submitted = True
                 
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Please provide an answer before submitting.")
 
@@ -125,7 +109,7 @@ def main():
         if st.button("Restart Interview"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.experimental_rerun()
+            st.rerun()
 
 if __name__ == "__main__":
     main()
