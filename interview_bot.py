@@ -29,7 +29,7 @@ def generate_response(prompt, conversation_history=None):
 
         client = OpenAI(api_key=st.secrets["openai_api_key"])
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4-0613",
             messages=messages,
             max_tokens=250,
             n=1,
@@ -56,9 +56,9 @@ def main():
     if 'conversation' not in st.session_state:
         st.session_state.conversation = []
     if 'current_question' not in st.session_state:
-        st.session_state.current_question = ""
-    if 'ai_feedback' not in st.session_state:
-        st.session_state.ai_feedback = ""
+        st.session_state.current_question = "Can you briefly introduce yourself, your role in higher education and interest in AI?"
+    if 'user_input' not in st.session_state:
+        st.session_state.user_input = ""
 
     # Display consent information and get user consent
     st.write("""
@@ -67,7 +67,8 @@ def main():
     and may be anonymously quoted in publications. 
 
     You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. 
-    This interview will be conducted by an AI assistant who will ask questions and follow-up probes based on your responses.
+    This interview will be conducted by an AI assistant who, along with asking set questions, 
+    will ask additional probing questions depending on your response.
     """)
 
     consent = st.radio("Do you consent to participate in this interview?", ("No", "Yes"))
@@ -80,18 +81,11 @@ def main():
         return
 
     if st.session_state.consent_given:
-        # Display AI feedback if it exists
-        if st.session_state.ai_feedback:
-            st.write("AI Feedback:", st.session_state.ai_feedback)
-            st.session_state.ai_feedback = ""  # Clear the feedback after displaying
-
         # Display the current question
-        if not st.session_state.current_question:
-            st.session_state.current_question = "Can you briefly introduce yourself, your role in higher education, and your interest in AI?"
         st.write(st.session_state.current_question)
 
         # Get user input
-        user_answer = st.text_area("Your response:", key="user_input")
+        user_answer = st.text_area("Your response:", key="user_input", value=st.session_state.user_input)
         
         if st.button("Submit Answer"):
             if user_answer:
@@ -99,22 +93,17 @@ def main():
                 st.session_state.conversation.append({"role": "user", "content": user_answer})
                 
                 # Generate AI response
-                ai_prompt = f"User's answer: {user_answer}\nProvide feedback and ask a relevant follow-up question based on the user's response and the interview topics."
+                ai_prompt = f"User's answer: {user_answer}\nProvide feedback and ask a follow-up question."
                 ai_response = generate_response(ai_prompt, st.session_state.conversation)
-                
-                # Split AI response into feedback and follow-up
-                parts = ai_response.split("\n", 1)
-                feedback = parts[0]
-                follow_up = parts[1] if len(parts) > 1 else "Can you elaborate on that?"
-
-                # Store AI feedback for next iteration
-                st.session_state.ai_feedback = feedback
-                
-                # Update current question
-                st.session_state.current_question = follow_up
                 
                 # Add AI's response to conversation history
                 st.session_state.conversation.append({"role": "assistant", "content": ai_response})
+                
+                # Update current question with AI's follow-up
+                st.session_state.current_question = ai_response
+                
+                # Clear the user input
+                st.session_state.user_input = ""
                 
                 st.rerun()
             else:
