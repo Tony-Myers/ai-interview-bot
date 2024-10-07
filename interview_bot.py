@@ -29,7 +29,7 @@ def generate_response(prompt, response_type="feedback", conversation_history=Non
 
         client = OpenAI(api_key=st.secrets["openai_api_key"])
         response = client.chat.completions.create(
-            model="gpt-4-0613",  # Changed to GPT-4-0613
+            model="gpt-4o",  # Changed to GPT-4o
             messages=messages,
             max_tokens=200,
             n=1,
