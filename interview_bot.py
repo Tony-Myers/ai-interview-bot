@@ -29,9 +29,9 @@ def generate_response(prompt, response_type="feedback", conversation_history=Non
 
         client = OpenAI(api_key=st.secrets["openai_api_key"])
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
-            max_tokens=200,
+            max_tokens=140,
             n=1,
             temperature=0.7,
         )
@@ -44,7 +44,8 @@ def get_transcript_download_link(conversation):
     csv = df.to_csv(index=False)
     csv_bytes = csv.encode()
     b64 = base64.b64encode(csv_bytes).decode()
-    return f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Interview Transcript</a>'
+    href = f'<a href="data:file/csv;base64,{b64}" download="interview_transcript.csv">Download Transcript</a>'
+    return href
 
 def main():
     st.title("AI in Education Interview Bot")
@@ -60,6 +61,8 @@ def main():
         st.session_state.current_question = ""
     if 'follow_up_question' not in st.session_state:
         st.session_state.follow_up_question = ""
+    if 'awaiting_follow_up' not in st.session_state:
+        st.session_state.awaiting_follow_up = False
     if 'user_input' not in st.session_state:
         st.session_state.user_input = ""
 
@@ -94,7 +97,7 @@ def main():
                 st.write(st.session_state.follow_up_question)
 
             # Get user input
-            user_answer = st.text_area("Your response:", key=f"user_input_{st.session_state.question_index}")
+            user_answer = st.text_area("Your response:", value=st.session_state.user_input, key=f"user_input_{st.session_state.question_index}")
             
             if st.button("Submit Answer"):
                 if user_answer:
@@ -122,9 +125,13 @@ def main():
                     # Clear the user input
                     st.session_state.user_input = ""
                     
+                    # Toggle awaiting_follow_up
+                    st.session_state.awaiting_follow_up = not st.session_state.awaiting_follow_up
+                    
                     # Move to next question if it's not a follow-up
-                    if st.session_state.question_index % 2 == 0:
+                    if not st.session_state.awaiting_follow_up:
                         st.session_state.question_index += 1
+                        st.session_state.follow_up_question = ""
                     
                     st.rerun()
                 else:
@@ -134,6 +141,7 @@ def main():
             if st.button("Skip to Next Question"):
                 st.session_state.question_index += 1
                 st.session_state.follow_up_question = ""
+                st.session_state.awaiting_follow_up = False
                 st.session_state.user_input = ""
                 st.rerun()
 
