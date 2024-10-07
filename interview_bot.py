@@ -29,11 +29,11 @@ def generate_response(prompt, conversation_history=None):
 
         client = OpenAI(api_key=st.secrets["openai_api_key"])
         response = client.chat.completions.create(
-            model="gpt-4-0613",
+            model="gpt-4o",
             messages=messages,
-            max_tokens=250,
+            max_tokens=110,
             n=1,
-            temperature=0.7,
+            temperature=0.6,
         )
         return response.choices[0].message.content
     except Exception as e:
