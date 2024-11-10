@@ -1,12 +1,7 @@
 import streamlit as st
-import openai
 from openai import OpenAI
 import pandas as pd
 import base64
-
-
-# Define the password for access
-PASSWORD = "Newmman_AI"  # Replace with your desired password
 
 # List of interview topics (instead of fixed questions)
 interview_topics = [
@@ -16,7 +11,6 @@ interview_topics = [
     "Ethical considerations in implementing AI in education",
     "AI's potential to transform higher education"
 ]
-total_questions = len(interview_topics)  # Total number of interview topics for progress bar
 
 def generate_response(prompt, conversation_history=None):
     try:
@@ -33,15 +27,21 @@ def generate_response(prompt, conversation_history=None):
             {"role": "user", "content": prompt}
         ]
 
-        client = st.secrets["openai_api_key"]
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            max_tokens=110,
-            n=1,
-            temperature=0.6,
-        )
-        return response.choices[0].message.content
+        # Catch any issues with the API client or key
+        try:
+            client = OpenAI(api_key=st.secrets["openai_api_key"])
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                max_tokens=110,
+                n=1,
+                temperature=0.6,
+            )
+            return response.choices[0].message.content
+        except Exception as api_error:
+            st.error(f"OpenAI API error: {api_error}")
+            return "An error occurred with the OpenAI API."
+
     except Exception as e:
         return f"An error occurred in generate_response: {str(e)}"
 
@@ -53,21 +53,6 @@ def get_transcript_download_link(conversation):
     return href
 
 def main():
-    # Password authentication
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-
-    if not st.session_state.authenticated:
-        password = st.text_input("Enter password to access the interview app:", type="password")
-        if st.button("Submit"):
-            if password == PASSWORD:
-                st.session_state.authenticated = True
-                st.success("Access granted.")
-            else:
-                st.error("Incorrect password.")
-        return  # Stop the app here if not authenticated
-
-    # Interview app content (only shown if authenticated)
     st.title("AI Interview Bot")
 
     if "conversation" not in st.session_state:
@@ -87,15 +72,9 @@ def main():
 
     if consent:
         st.write(st.session_state.current_question)
-
+    
         user_answer = st.text_area("Your response:", key=f"user_input_{len(st.session_state.conversation)}")
-
-        # Progress bar with a label indicating interview progress
-        completed_questions = len([entry for entry in st.session_state.conversation if entry['role'] == "user"])
-        progress_percentage = completed_questions / total_questions
-        st.write(f"**Interview Progress: {completed_questions} out of {total_questions} questions answered**")
-        st.progress(progress_percentage)
-
+    
         if st.button("Submit Answer"):
             if user_answer:
                 # Add user's answer to conversation history
@@ -114,7 +93,7 @@ def main():
                 # Set submitted flag to true
                 st.session_state.submitted = True
                 
-                st.rerun()
+                st.experimental_rerun()  # Compatible rerun command for Streamlit 1.39.0
             else:
                 st.warning("Please provide an answer before submitting.")
 
@@ -136,7 +115,7 @@ def main():
         if st.button("Restart Interview"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.rerun()
+            st.experimental_rerun()  # Compatible rerun command for Streamlit 1.39.0
 
 if __name__ == "__main__":
     main()
