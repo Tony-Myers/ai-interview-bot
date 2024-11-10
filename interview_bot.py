@@ -65,6 +65,12 @@ def main():
     consent = st.checkbox("I have read the information sheet and give my consent to participate in this interview.")
 
     if consent:
+        # Progress bar logic
+        questions_answered = len([entry for entry in st.session_state.conversation if entry['role'] == 'user'])
+        total_questions = len(interview_topics)
+        progress = questions_answered / total_questions
+        st.progress(progress)  # Display the progress bar
+
         st.write(st.session_state.current_question)
 
         user_answer = st.text_area("Your response:", key=f"user_input_{len(st.session_state.conversation)}")
