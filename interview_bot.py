@@ -68,7 +68,9 @@ def main():
         # Progress bar logic
         questions_answered = len([entry for entry in st.session_state.conversation if entry['role'] == 'user'])
         total_questions = len(interview_topics)
-        progress = questions_answered / total_questions
+        
+        # Ensuring progress does not exceed 1.0
+        progress = min(questions_answered / total_questions, 1.0)
         st.progress(progress)  # Display the progress bar
 
         st.write(st.session_state.current_question)
@@ -93,7 +95,7 @@ def main():
                 # Set submitted flag to true
                 st.session_state.submitted = True
                 
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.warning("Please provide an answer before submitting.")
 
@@ -115,7 +117,7 @@ def main():
         if st.button("Restart Interview"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.rerun()
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
