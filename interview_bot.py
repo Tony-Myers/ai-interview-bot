@@ -3,6 +3,9 @@ from openai import OpenAI
 import pandas as pd
 import base64
 
+# Define the password for access
+PASSWORD = "Newnan_AI_7649"  # Replace with your desired password
+
 # List of interview topics (instead of fixed questions)
 interview_topics = [
     "Introduction, role in higher education, and interest in AI",
@@ -48,6 +51,21 @@ def get_transcript_download_link(conversation):
     return href
 
 def main():
+    # Password authentication
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    if not st.session_state.authenticated:
+        password = st.text_input("Enter password to access the interview app:", type="password")
+        if st.button("Submit"):
+            if password == PASSWORD:
+                st.session_state.authenticated = True
+                st.success("Access granted.")
+            else:
+                st.error("Incorrect password.")
+        return  # Stop the app here if not authenticated
+
+    # Interview app content (only shown if authenticated)
     st.title("AI Interview Bot")
 
     if "conversation" not in st.session_state:
