@@ -1,7 +1,9 @@
 import streamlit as st
+import openai
 from openai import OpenAI
 import pandas as pd
 import base64
+
 
 # Define the password for access
 PASSWORD = "Newmman_AI"  # Replace with your desired password
@@ -31,7 +33,7 @@ def generate_response(prompt, conversation_history=None):
             {"role": "user", "content": prompt}
         ]
 
-        client = OpenAI(api_key=st.secrets["openai_api_key"])
+        client = st.secrets["openai_api_key"]
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
