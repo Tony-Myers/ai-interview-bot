@@ -1,10 +1,11 @@
 import streamlit as st
-import openai
-from openai import OpenAI
 import pandas as pd
 import base64
 
-# List of interview topics (instead of fixed questions)
+# Debug output at the start to verify the app is loading
+st.write("App has started loading. This is a diagnostic check.")
+
+# List of interview topics (for demonstration)
 interview_topics = [
     "Introduction, role in higher education, and interest in AI",
     "AI's impact on traditional classroom experience",
@@ -14,39 +15,22 @@ interview_topics = [
 ]
 
 def generate_response(prompt, conversation_history=None):
+    """
+    This function simulates generating an AI response.
+    Replace with actual OpenAI API call after verifying basic app functionality.
+    """
     try:
-        if conversation_history is None:
-            conversation_history = []
-
-        system_content = """You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses, including spellings like 'democratised'. Ensure your responses are complete and not truncated. 
-        After each user response, provide brief feedback and ask a relevant follow-up question based on their answer. Tailor your questions to the user's previous responses, avoiding repetition and exploring areas they haven't covered. Be adaptive and create a natural flow of conversation."""
-        
-        messages = [
-            {"role": "system", "content": system_content},
-            {"role": "system", "content": f"Interview topics: {interview_topics}"},
-            *conversation_history[-6:],  # Include the last 6 exchanges for more context
-            {"role": "user", "content": prompt}
-        ]
-
-        # Catch any issues with the API client or key
-        try:
-            client = OpenAI(api_key=st.secrets["openai_api_key"])
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                max_tokens=110,
-                n=1,
-                temperature=0.6,
-            )
-            return response.choices[0].message.content
-        except Exception as api_error:
-            st.error(f"OpenAI API error: {api_error}")
-            return "An error occurred with the OpenAI API."
-
+        # Here we simulate a response without an actual API call
+        ai_response = "This is a placeholder response. Replace with OpenAI API call."
+        return ai_response
     except Exception as e:
-        return f"An error occurred in generate_response: {str(e)}"
+        st.error(f"An error occurred in generate_response: {str(e)}")
+        return "An error occurred with the AI response generation."
 
 def get_transcript_download_link(conversation):
+    """
+    Function to generate a download link for the interview transcript.
+    """
     df = pd.DataFrame(conversation)
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()
@@ -54,69 +38,50 @@ def get_transcript_download_link(conversation):
     return href
 
 def main():
-    st.title("AI Interview Bot")
+    # Debug output to confirm the main function is executing
+    st.write("App is now executing the main function.")
 
+    st.title("AI Interview Bot - Diagnostic Mode")
+    st.write("If you see this, the basic app is loading correctly.")
+
+    # Initialize session state variables
     if "conversation" not in st.session_state:
         st.session_state.conversation = []
     if "current_question" not in st.session_state:
-        st.session_state.current_question = "Let's begin the interview. Can you please introduce yourself, your role in higher education, and your interest in AI?"
-    if "submitted" not in st.session_state:
-        st.session_state.submitted = False
+        st.session_state.current_question = "Please introduce yourself and your interest in AI."
 
-    st.write("""
-    Before we begin, please read the information sheet provided and understand that by ticking yes, you will be giving your written informed consent for your responses to be used for research purposes and may be anonymously quoted in publications.
+    consent = st.checkbox("I give my consent to participate in this interview.")
     
-    You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
-    """)
-
-    consent = st.checkbox("I have read the information sheet and give my consent to participate in this interview.")
-
     if consent:
         st.write(st.session_state.current_question)
-    
         user_answer = st.text_area("Your response:", key=f"user_input_{len(st.session_state.conversation)}")
-    
+
         if st.button("Submit Answer"):
             if user_answer:
                 # Add user's answer to conversation history
                 st.session_state.conversation.append({"role": "user", "content": user_answer})
                 
-                # Generate AI response
-                ai_prompt = f"User's answer: {user_answer}\nProvide feedback and ask a follow-up question."
-                ai_response = generate_response(ai_prompt, st.session_state.conversation)
+                # Simulate AI response without actual OpenAI API call
+                ai_response = generate_response(user_answer, st.session_state.conversation)
                 
                 # Add AI's response to conversation history
                 st.session_state.conversation.append({"role": "assistant", "content": ai_response})
                 
-                # Update current question with AI's follow-up
+                # Update the current question with AI's follow-up
                 st.session_state.current_question = ai_response
                 
-                # Set submitted flag to true
-                st.session_state.submitted = True
-                
-                st.experimental_rerun()  # Compatible rerun command for Streamlit 1.39.0
+                # Rerun to update UI
+                st.experimental_rerun()
             else:
                 st.warning("Please provide an answer before submitting.")
 
-        # Option to end the interview
-        if st.button("End Interview"):
-            st.success("Interview completed! Thank you for your insights on AI in education.")
-            st.session_state.current_question = "Interview ended"
-
         # Display conversation history and download link
-        if st.checkbox("Show Interview Transcript"):
-            st.write("Interview Transcript:")
-            for entry in st.session_state.conversation:
-                st.write(f"{entry['role'].capitalize()}: {entry['content']}")
-                st.write("---")
+        st.write("Interview Transcript:")
+        for entry in st.session_state.conversation:
+            st.write(f"{entry['role'].capitalize()}: {entry['content']}")
+            st.write("---")
             
-            st.markdown(get_transcript_download_link(st.session_state.conversation), unsafe_allow_html=True)
-
-        # Option to restart the interview
-        if st.button("Restart Interview"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.experimental_rerun()  # Compatible rerun command for Streamlit 1.39.0
+        st.markdown(get_transcript_download_link(st.session_state.conversation), unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
