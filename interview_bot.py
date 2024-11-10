@@ -3,7 +3,7 @@ from openai import OpenAI
 import pandas as pd
 import base64
 
-# List of interview topics
+# List of interview topics (instead of fixed questions)
 interview_topics = [
     "Introduction, role in higher education, and interest in AI",
     "AI's impact on traditional classroom experience",
@@ -11,6 +11,7 @@ interview_topics = [
     "Ethical considerations in implementing AI in education",
     "AI's potential to transform higher education"
 ]
+total_questions = len(interview_topics)  # Total number of interview topics for progress bar
 
 def generate_response(prompt, conversation_history=None):
     try:
@@ -26,7 +27,7 @@ def generate_response(prompt, conversation_history=None):
             *conversation_history[-6:],  # Include the last 6 exchanges for more context
             {"role": "user", "content": prompt}
         ]
-    
+
         client = OpenAI(api_key=st.secrets["openai_api_key"])
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -49,11 +50,17 @@ def get_transcript_download_link(conversation):
 def main():
     st.title("AI Interview Bot")
 
-    # Initialize session state
     if "conversation" not in st.session_state:
         st.session_state.conversation = []
     if "current_question" not in st.session_state:
         st.session_state.current_question = "Let's begin the interview. Can you please introduce yourself, your role in higher education, and your interest in AI?"
+    if "submitted" not in st.session_state:
+        st.session_state.submitted = False
+
+    # Track progress
+    completed_questions = len([entry for entry in st.session_state.conversation if entry['role'] == "user"])
+    progress_percentage = completed_questions / total_questions
+    st.progress(progress_percentage)
 
     st.write("""
     Before we begin, please read the information sheet provided and understand that by ticking yes, you will be giving your written informed consent for your responses to be used for research purposes and may be anonymously quoted in publications.
@@ -62,11 +69,11 @@ def main():
     """)
 
     consent = st.checkbox("I have read the information sheet and give my consent to participate in this interview.")
-    
+
     if consent:
         st.write(st.session_state.current_question)
-    
-        user_answer = st.text_area("Your response:")
+
+        user_answer = st.text_area("Your response:", key=f"user_input_{len(st.session_state.conversation)}")
 
         if st.button("Submit Answer"):
             if user_answer:
@@ -83,15 +90,12 @@ def main():
                 # Update current question with AI's follow-up
                 st.session_state.current_question = ai_response
                 
-                st.experimental_rerun()  # Rerun to update state and re-render
+                # Set submitted flag to true
+                st.session_state.submitted = True
+                
+                st.rerun()
             else:
                 st.warning("Please provide an answer before submitting.")
-    
-        # Display progress bar at the bottom
-        questions_answered = len([entry for entry in st.session_state.conversation if entry['role'] == 'user'])
-        total_questions = len(interview_topics)
-        progress = min(questions_answered / total_questions, 1.0)
-        st.progress(progress)
 
         # Option to end the interview
         if st.button("End Interview"):
@@ -111,7 +115,7 @@ def main():
         if st.button("Restart Interview"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.experimental_rerun()  # Refresh session state and rerun
+            st.rerun()
 
 if __name__ == "__main__":
     main()
