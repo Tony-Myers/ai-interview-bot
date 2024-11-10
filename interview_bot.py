@@ -4,7 +4,7 @@ import pandas as pd
 import base64
 
 # Define the password for access
-PASSWORD = "Newman_AI_98976"  # Replace with your desired password
+PASSWORD = "Newmman_AI"  # Replace with your desired password
 
 # List of interview topics (instead of fixed questions)
 interview_topics = [
@@ -16,16 +16,14 @@ interview_topics = [
 ]
 total_questions = len(interview_topics)  # Total number of interview topics for progress bar
 
-def generate_response(prompt, research_question, conversation_history=None):
+def generate_response(prompt, conversation_history=None):
     try:
         if conversation_history is None:
             conversation_history = []
 
-        system_content = f"""You are an experienced and considerate interviewer in higher education, focusing on AI applications.
-        The research question guiding this interview is: "{research_question}". Use British English in your responses, including spellings like 'democratised'. 
-        Ensure your responses are complete and not truncated. After each user response, provide brief feedback and ask a relevant follow-up question based on their answer.
-        Tailor your questions to the user's previous responses, avoiding repetition and exploring areas they haven't covered. Be adaptive and create a natural flow of conversation."""
-
+        system_content = """You are an experienced and considerate interviewer in higher education, focusing on AI applications. Use British English in your responses, including spellings like 'democratised'. Ensure your responses are complete and not truncated. 
+        After each user response, provide brief feedback and ask a relevant follow-up question based on their answer. Tailor your questions to the user's previous responses, avoiding repetition and exploring areas they haven't covered. Be adaptive and create a natural flow of conversation."""
+        
         messages = [
             {"role": "system", "content": system_content},
             {"role": "system", "content": f"Interview topics: {interview_topics}"},
@@ -67,14 +65,6 @@ def main():
                 st.error("Incorrect password.")
         return  # Stop the app here if not authenticated
 
-    # User input for research question
-    if "research_question" not in st.session_state:
-        st.session_state.research_question = st.text_input("Enter your research question to guide the interview:")
-
-    if not st.session_state.research_question:
-        st.warning("Please enter a research question to proceed with the interview.")
-        return  # Stop the app until a research question is entered
-
     # Interview app content (only shown if authenticated)
     st.title("AI Interview Bot")
 
@@ -109,9 +99,9 @@ def main():
                 # Add user's answer to conversation history
                 st.session_state.conversation.append({"role": "user", "content": user_answer})
                 
-                # Generate AI response, using the research question as context
+                # Generate AI response
                 ai_prompt = f"User's answer: {user_answer}\nProvide feedback and ask a follow-up question."
-                ai_response = generate_response(ai_prompt, st.session_state.research_question, st.session_state.conversation)
+                ai_response = generate_response(ai_prompt, st.session_state.conversation)
                 
                 # Add AI's response to conversation history
                 st.session_state.conversation.append({"role": "assistant", "content": ai_response})
