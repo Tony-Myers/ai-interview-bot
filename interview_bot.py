@@ -57,11 +57,6 @@ def main():
     if "submitted" not in st.session_state:
         st.session_state.submitted = False
 
-    # Track progress
-    completed_questions = len([entry for entry in st.session_state.conversation if entry['role'] == "user"])
-    progress_percentage = completed_questions / total_questions
-    st.progress(progress_percentage)
-
     st.write("""
     Before we begin, please read the information sheet provided and understand that by ticking yes, you will be giving your written informed consent for your responses to be used for research purposes and may be anonymously quoted in publications.
     
@@ -74,6 +69,11 @@ def main():
         st.write(st.session_state.current_question)
 
         user_answer = st.text_area("Your response:", key=f"user_input_{len(st.session_state.conversation)}")
+
+        # Progress bar below the question and response input
+        completed_questions = len([entry for entry in st.session_state.conversation if entry['role'] == "user"])
+        progress_percentage = completed_questions / total_questions
+        st.progress(progress_percentage)
 
         if st.button("Submit Answer"):
             if user_answer:
