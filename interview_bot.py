@@ -70,9 +70,10 @@ def main():
 
         user_answer = st.text_area("Your response:", key=f"user_input_{len(st.session_state.conversation)}")
 
-        # Progress bar below the question and response input
+        # Progress bar with a label indicating interview progress
         completed_questions = len([entry for entry in st.session_state.conversation if entry['role'] == "user"])
         progress_percentage = completed_questions / total_questions
+        st.write(f"**Interview Progress: {completed_questions} out of {total_questions} questions answered**")
         st.progress(progress_percentage)
 
         if st.button("Submit Answer"):
