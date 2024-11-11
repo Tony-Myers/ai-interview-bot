@@ -4,7 +4,7 @@ import pandas as pd
 import base64
 
 # Define the password for access
-PASSWORD = "your_password_here"  # Replace with your desired password
+PASSWORD = "Newman_AI_2896"  # Replace with your desired password
 
 # List of interview topics (instead of fixed questions)
 interview_topics = [
