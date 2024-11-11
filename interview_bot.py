@@ -1,10 +1,10 @@
 import streamlit as st
-import openai
 from openai import OpenAI
 import pandas as pd
 import base64
 
 # List of interview topics (instead of fixed questions)
+
 interview_topics = [
     "Introduction, role in higher education, and interest in AI",
     "AI's impact on traditional classroom experience",
@@ -27,22 +27,16 @@ def generate_response(prompt, conversation_history=None):
             *conversation_history[-6:],  # Include the last 6 exchanges for more context
             {"role": "user", "content": prompt}
         ]
-
-        # Catch any issues with the API client or key
-        try:
-            client = OpenAI(api_key=st.secrets["openai_api_key"])
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                max_tokens=110,
-                n=1,
-                temperature=0.6,
-            )
-            return response.choices[0].message.content
-        except Exception as api_error:
-            st.error(f"OpenAI API error: {api_error}")
-            return "An error occurred with the OpenAI API."
-
+    
+        client = OpenAI(api_key=st.secrets["openai_api_key"])
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            max_tokens=110,
+            n=1,
+            temperature=0.6,
+        )
+        return response.choices[0].message.content
     except Exception as e:
         return f"An error occurred in generate_response: {str(e)}"
 
@@ -62,15 +56,15 @@ def main():
         st.session_state.current_question = "Let's begin the interview. Can you please introduce yourself, your role in higher education, and your interest in AI?"
     if "submitted" not in st.session_state:
         st.session_state.submitted = False
-
+    
     st.write("""
     Before we begin, please read the information sheet provided and understand that by ticking yes, you will be giving your written informed consent for your responses to be used for research purposes and may be anonymously quoted in publications.
     
     You can choose to end the interview at any time and request your data be removed by emailing tony.myers@staff.ac.uk. This interview will be conducted by an AI assistant who, along with asking set questions, will ask additional probing questions depending on your response.
     """)
-
+    
     consent = st.checkbox("I have read the information sheet and give my consent to participate in this interview.")
-
+    
     if consent:
         st.write(st.session_state.current_question)
     
@@ -94,15 +88,15 @@ def main():
                 # Set submitted flag to true
                 st.session_state.submitted = True
                 
-                st.experimental_rerun()  # Compatible rerun command for Streamlit 1.39.0
+                st.rerun()
             else:
                 st.warning("Please provide an answer before submitting.")
-
+    
         # Option to end the interview
         if st.button("End Interview"):
             st.success("Interview completed! Thank you for your insights on AI in education.")
             st.session_state.current_question = "Interview ended"
-
+    
         # Display conversation history and download link
         if st.checkbox("Show Interview Transcript"):
             st.write("Interview Transcript:")
@@ -111,12 +105,12 @@ def main():
                 st.write("---")
             
             st.markdown(get_transcript_download_link(st.session_state.conversation), unsafe_allow_html=True)
-
+    
         # Option to restart the interview
         if st.button("Restart Interview"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.experimental_rerun()  # Compatible rerun command for Streamlit 1.39.0
+            st.rerun()
 
 if __name__ == "__main__":
     main()
