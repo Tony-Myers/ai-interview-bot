@@ -9,13 +9,17 @@ OPENAI_API_KEY = st.secrets["openai_api_key"]
 
 # List of interview topics
 interview_topics = [
-    "Introduction, role in higher education, and interest in AI",
-    "AI's impact on traditional classroom experience",
-    "AI enhancing student learning experience",
-    "Ethical considerations in implementing AI in education",
-    "AI's potential to transform higher education"
+    "Introduction and personal background",
+    "Experiences using generative AI tools",
+    "Perceived benefits of generative AI in coursework",
+    "Challenges faced when integrating AI tools",
+    "Impact on academic development and assessment performance",
+    "Strategies for incorporating AI outputs into work",
+    "Effectiveness of guidance on prompt design and AI competencies",
+    "Generative AI's role in creating accessible educational environments"
 ]
-total_questions = len(interview_topics)  # Total number of interview topics for progress bar
+
+total_questions = len(interview_topics)  # Total number of interview topics for progress bar# Total number of interview topics for progress bar
 
 def generate_response(prompt, conversation_history=None):
     try:
